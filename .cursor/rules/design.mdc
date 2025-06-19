@@ -1,0 +1,600 @@
+---
+title: "Design"
+description: "TODO: add description for Design"
+alwaysApply: false
+---
+# Design Guidelines
+
+## Design Philosophy
+
+### Core Principles
+
+#### 1. Multi-Interface Consistency
+- **Unified Experience**: Consistent design language across web, CLI, and AGUIApp
+- **Context-Appropriate**: Each interface optimized for its specific use case
+- **Brand Coherence**: Consistent visual identity and interaction patterns
+
+#### 2. User-Centric Design
+- **Accessibility First**: WCAG 2.1 AA compliance across all interfaces
+- **Progressive Disclosure**: Information revealed as needed
+- **Clear Hierarchy**: Visual hierarchy guides user attention effectively
+
+#### 3. Enterprise-Grade Quality
+- **Professional Aesthetics**: Clean, modern, business-appropriate design
+- **Scalability**: Design system that scales with feature growth
+- **Reliability**: Consistent, predictable user experience
+
+## Visual Design System
+
+### Color Palette
+
+#### Primary Colors
+```css
+/* Primary Green Gradient */
+--primary-start: #4CAF50;
+--primary-end: #45a049;
+
+/* Secondary Purple Gradient */
+--secondary-start: #667eea;
+--secondary-end: #764ba2;
+
+/* Neutral Colors */
+--white: #ffffff;
+--gray-50: #f8f9fa;
+--gray-100: #e9ecef;
+--gray-300: #dee2e6;
+--gray-500: #6c757d;
+--gray-700: #495057;
+--gray-900: #212529;
+```
+
+#### Semantic Colors
+```css
+/* Status Colors */
+--success: #28a745;
+--warning: #ffc107;
+--error: #dc3545;
+--info: #17a2b8;
+
+/* Background Colors */
+--bg-primary: #ffffff;
+--bg-secondary: #f8f9fa;
+--bg-accent: linear-gradient(135deg, #4CAF50, #45a049);
+```
+
+### Typography
+
+#### Font Stack
+```css
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+             'Helvetica Neue', Arial, sans-serif;
+```
+
+#### Type Scale
+```css
+/* Headings */
+--h1-size: 2.5rem;    /* 40px */
+--h2-size: 2rem;      /* 32px */
+--h3-size: 1.5rem;    /* 24px */
+--h4-size: 1.25rem;   /* 20px */
+
+/* Body Text */
+--body-large: 1.125rem;  /* 18px */
+--body-base: 1rem;       /* 16px */
+--body-small: 0.875rem;  /* 14px */
+--caption: 0.75rem;      /* 12px */
+
+/* Line Heights */
+--line-height-tight: 1.2;
+--line-height-base: 1.6;
+--line-height-loose: 1.8;
+```
+
+#### Font Weights
+```css
+--font-light: 300;
+--font-regular: 400;
+--font-medium: 500;
+--font-semibold: 600;
+--font-bold: 700;
+```
+
+### Spacing System
+
+#### Spacing Scale
+```css
+/* Base unit: 4px */
+--space-1: 0.25rem;   /* 4px */
+--space-2: 0.5rem;    /* 8px */
+--space-3: 0.75rem;   /* 12px */
+--space-4: 1rem;      /* 16px */
+--space-5: 1.25rem;   /* 20px */
+--space-6: 1.5rem;    /* 24px */
+--space-8: 2rem;      /* 32px */
+--space-10: 2.5rem;   /* 40px */
+--space-12: 3rem;     /* 48px */
+```
+
+#### Layout Spacing
+```css
+/* Component Spacing */
+--component-padding: var(--space-6);
+--section-margin: var(--space-8);
+--container-padding: var(--space-5);
+
+/* Form Spacing */
+--form-field-margin: var(--space-4);
+--form-group-margin: var(--space-6);
+```
+
+### Border Radius
+```css
+--radius-sm: 4px;
+--radius-base: 8px;
+--radius-lg: 12px;
+--radius-xl: 16px;
+--radius-full: 9999px;
+```
+
+### Shadows
+```css
+--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+--shadow-base: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+--shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+```
+
+## Web Dashboard Design
+
+### Layout Structure
+
+#### Grid System
+```css
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+}
+
+.grid {
+    display: grid;
+    gap: var(--space-6);
+}
+
+.two-column {
+    grid-template-columns: 300px 1fr;
+}
+
+@media (max-width: 768px) {
+    .two-column {
+        grid-template-columns: 1fr;
+    }
+}
+```
+
+#### Header Component
+```css
+.header {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: var(--space-8) var(--space-6);
+    text-align: center;
+    box-shadow: var(--shadow-base);
+}
+
+.header h1 {
+    font-size: var(--h1-size);
+    font-weight: var(--font-bold);
+    margin: 0;
+}
+
+.header p {
+    font-size: var(--body-large);
+    margin-top: var(--space-2);
+    opacity: 0.9;
+}
+```
+
+#### Sidebar Component
+```css
+.sidebar {
+    background: var(--bg-secondary);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-base);
+    height: fit-content;
+}
+
+.sidebar h2 {
+    font-size: var(--h3-size);
+    color: var(--gray-900);
+    margin-bottom: var(--space-4);
+    border-bottom: 2px solid var(--gray-100);
+    padding-bottom: var(--space-2);
+}
+```
+
+### Component Design
+
+#### Form Controls
+```css
+.form-control {
+    width: 100%;
+    padding: var(--space-3);
+    border: 2px solid var(--gray-100);
+    border-radius: var(--radius-base);
+    font-size: var(--body-base);
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-start);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.form-control::placeholder {
+    color: var(--gray-500);
+}
+```
+
+#### Button System
+```css
+/* Primary Button */
+.btn-primary {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-base);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+}
+
+/* Secondary Button */
+.btn-secondary {
+    background: white;
+    color: var(--primary-start);
+    border: 2px solid var(--primary-start);
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-base);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: var(--primary-start);
+    color: white;
+}
+
+/* Danger Button */
+.btn-danger {
+    background: var(--error);
+    color: white;
+    border: none;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-base);
+    font-size: var(--body-small);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+```
+
+#### File Upload Component
+```css
+.file-upload {
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8);
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.file-upload:hover,
+.file-upload.dragover {
+    border-color: var(--primary-start);
+    background: rgba(76, 175, 80, 0.05);
+}
+
+.file-upload input[type="file"] {
+    display: none;
+}
+
+.file-upload-icon {
+    font-size: 3rem;
+    color: var(--gray-500);
+    margin-bottom: var(--space-4);
+}
+
+.file-upload-text {
+    color: var(--gray-700);
+    font-size: var(--body-base);
+}
+```
+
+#### Status Messages
+```css
+.status {
+    padding: var(--space-4);
+    border-radius: var(--radius-base);
+    margin-bottom: var(--space-4);
+    border-left: 4px solid;
+    animation: slideIn 0.3s ease;
+}
+
+.status.success {
+    background: rgba(40, 167, 69, 0.1);
+    border-color: var(--success);
+    color: #155724;
+}
+
+.status.error {
+    background: rgba(220, 53, 69, 0.1);
+    border-color: var(--error);
+    color: #721c24;
+}
+
+.status.info {
+    background: rgba(23, 162, 184, 0.1);
+    border-color: var(--info);
+    color: #0c5460;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+```
+
+### Responsive Design
+
+#### Breakpoints
+```css
+/* Mobile First Approach */
+@media (min-width: 576px) { /* Small devices */ }
+@media (min-width: 768px) { /* Medium devices */ }
+@media (min-width: 992px) { /* Large devices */ }
+@media (min-width: 1200px) { /* Extra large devices */ }
+```
+
+#### Mobile Optimizations
+```css
+@media (max-width: 767px) {
+    .container {
+        padding: 0 var(--space-4);
+    }
+    
+    .header {
+        padding: var(--space-6) var(--space-4);
+    }
+    
+    .header h1 {
+        font-size: var(--h2-size);
+    }
+    
+    .sidebar {
+        margin-bottom: var(--space-6);
+    }
+    
+    .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+```
+
+## AGUIApp Interface Design
+
+### Design Principles
+- **Streamlit-like Simplicity**: Clean, component-based interface
+- **Developer-Focused**: Technical information prominently displayed
+- **Real-time Feedback**: Immediate response to user actions
+
+### Component Styling
+```python
+# AGUIApp styling configuration
+agui_app = AGUIApp(
+    agent=chat_agent,
+    name="Enterprise RAG System",
+    app_id="enterprise_rag_system",
+    description="Advanced RAG system with multi-LLM support",
+    show_session_id=True,
+    show_reasoning=True,
+    theme_config={
+        "primary_color": "#4CAF50",
+        "background_color": "#ffffff",
+        "secondary_background_color": "#f8f9fa",
+        "text_color": "#212529",
+    }
+)
+```
+
+## CLI Interface Design
+
+### Terminal Aesthetics
+- **Color Coding**: Different colors for different types of output
+- **Clear Hierarchy**: Consistent formatting for commands and responses
+- **Progress Indicators**: Visual feedback for long-running operations
+
+### Output Formatting
+```python
+# CLI color scheme
+COLORS = {
+    'header': '\033[1;32m',      # Bold Green
+    'info': '\033[1;34m',        # Bold Blue
+    'warning': '\033[1;33m',     # Bold Yellow
+    'error': '\033[1;31m',       # Bold Red
+    'success': '\033[1;32m',     # Bold Green
+    'reset': '\033[0m',          # Reset
+}
+
+# Example usage
+def print_header(text):
+    print(f"{COLORS['header']}{'=' * 60}")
+    print(f"{text}")
+    print(f"{'=' * 60}{COLORS['reset']}")
+```
+
+## Accessibility Guidelines
+
+### WCAG 2.1 AA Compliance
+
+#### Color Contrast
+- **Normal Text**: Minimum 4.5:1 contrast ratio
+- **Large Text**: Minimum 3:1 contrast ratio
+- **Non-text Elements**: Minimum 3:1 contrast ratio
+
+#### Keyboard Navigation
+```css
+/* Focus indicators */
+*:focus {
+    outline: 2px solid var(--primary-start);
+    outline-offset: 2px;
+}
+
+/* Skip links */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: var(--primary-start);
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    z-index: 1000;
+}
+
+.skip-link:focus {
+    top: 6px;
+}
+```
+
+#### ARIA Labels
+```html
+<!-- Form labels -->
+<label for="fileInput">Upload Documents</label>
+<input type="file" id="fileInput" aria-describedby="fileHelp">
+<div id="fileHelp">Supported formats: PDF, DOCX, TXT (max 10MB)</div>
+
+<!-- Status updates -->
+<div role="status" aria-live="polite" id="uploadStatus">
+    <!-- Dynamic status updates -->
+</div>
+
+<!-- Buttons -->
+<button aria-label="Send query to AI assistant" onclick="sendQuery()">
+    Send
+</button>
+```
+
+### Screen Reader Support
+- **Semantic HTML**: Proper heading hierarchy and landmarks
+- **Alt Text**: Descriptive alternative text for images
+- **Form Labels**: Explicit labels for all form controls
+- **Status Updates**: Live regions for dynamic content
+
+## Animation & Interactions
+
+### Micro-interactions
+```css
+/* Hover effects */
+.interactive:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+/* Loading animations */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.loading {
+    animation: pulse 2s infinite;
+}
+
+/* Progress indicators */
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-start), var(--primary-end));
+    transition: width 0.3s ease;
+}
+```
+
+### Page Transitions
+```css
+/* Smooth page transitions */
+.page-transition {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+```
+
+## Performance Considerations
+
+### CSS Optimization
+- **Critical CSS**: Inline critical styles for faster rendering
+- **CSS Minification**: Compressed CSS for production
+- **Font Loading**: Optimized web font loading strategy
+
+### Image Optimization
+- **SVG Icons**: Vector icons for scalability
+- **Responsive Images**: Appropriate sizes for different devices
+- **Lazy Loading**: Load images as needed
+
+### JavaScript Performance
+- **Debounced Inputs**: Prevent excessive API calls
+- **Efficient DOM Updates**: Minimize DOM manipulation
+- **Code Splitting**: Load JavaScript as needed
+
+## Brand Guidelines
+
+### Logo Usage
+- **Primary Logo**: Full color version for light backgrounds
+- **Monochrome**: Single color version for varied backgrounds
+- **Minimum Size**: 24px height for digital use
+- **Clear Space**: Minimum padding equal to logo height
+
+### Voice & Tone
+- **Professional**: Business-appropriate language
+- **Helpful**: Supportive and informative
+- **Clear**: Concise and understandable
+- **Confident**: Authoritative but approachable
+
+### Iconography
+- **Style**: Outline icons with consistent stroke width
+- **Size**: 16px, 20px, 24px standard sizes
+- **Color**: Inherit text color or use semantic colors
+- **Source**: Feather Icons or similar consistent icon set
+
+This design system ensures consistency, accessibility, and professional quality across all interfaces while maintaining the flexibility needed for different user contexts and technical requirements.

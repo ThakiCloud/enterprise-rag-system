@@ -1,0 +1,157 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# API Specification Guidelines
+
+## REST API Design Principles
+
+### Base URL Structure
+- **Production**: `https://api.enterprise-rag.com`
+- **Development**: `http://localhost:8000`
+- **API Version**: `/api/v1/`
+
+### Authentication
+- **Current**: No authentication (development)
+- **Planned**: JWT Bearer token authentication
+- **Header**: `Authorization: Bearer <token>`
+
+## Core Endpoints
+
+### 1. Query Processing
+```http
+POST /api/v1/query/
+Content-Type: application/json
+
+{
+  "question": "string (required)",
+  "session_id": "string (optional)",
+  "use_advanced_reasoning": "boolean (optional, default: false)"
+}
+```
+
+**Response**:
+```json
+{
+  "query": "string",
+  "response": "string",
+  "session_id": "string",
+  "sources": [
+    {
+      "type": "string",
+      "content": "string",
+      "uri": "string"
+    }
+  ],
+  "reasoning_steps": ["string"] | null,
+  "timestamp": "string (ISO 8601)",
+  "status": "success" | "error"
+}
+```
+
+### 2. Document Management
+```http
+POST /api/v1/upload-document/
+Content-Type: multipart/form-data
+
+file: binary (required, max 10MB)
+```
+
+**Supported formats**: `.pdf`, `.docx`, `.txt`, `.md`
+
+**Response**:
+```json
+{
+  "message": "string",
+  "document_id": "string",
+  "filename": "string",
+  "status": "success" | "error"
+}
+```
+
+### 3. URL Content Processing
+```http
+POST /api/v1/add-url/
+Content-Type: application/json
+
+{
+  "url": "string (required, must start with http:// or https://)"
+}
+```
+
+### 4. Session Management
+```http
+GET /api/v1/sessions/
+GET /api/v1/sessions/{session_id}
+DELETE /api/v1/sessions/{session_id}
+```
+
+### 5. Knowledge Base Stats
+```http
+GET /api/v1/knowledge-base/stats
+```
+
+**Response**:
+```json
+{
+  "total_documents": "number",
+  "vector_db_table": "string",
+  "search_type": "string",
+  "status": "active" | "inactive"
+}
+```
+
+### 6. System Health
+```http
+GET /health/
+```
+
+## Error Handling
+
+### HTTP Status Codes
+- `200`: Success
+- `400`: Bad Request (validation errors)
+- `404`: Not Found
+- `413`: Payload Too Large (file size exceeded)
+- `422`: Unprocessable Entity (invalid data)
+- `500`: Internal Server Error
+
+### Error Response Format
+```json
+{
+  "detail": "string (error message)",
+  "status_code": "number",
+  "timestamp": "string (ISO 8601)"
+}
+```
+
+## Request/Response Guidelines
+
+### Content Types
+- **Request**: `application/json` for JSON data, `multipart/form-data` for file uploads
+- **Response**: `application/json` (default), `text/html` for dashboard
+
+### Headers
+- **Required**: `Content-Type`
+- **Optional**: `Accept`, `User-Agent`
+- **Future**: `Authorization` (when auth is implemented)
+
+### Rate Limiting (Planned)
+- **Default**: 100 requests per minute per IP
+- **Authenticated**: 1000 requests per minute per user
+
+## API Documentation
+- **Interactive Docs**: `/docs` (Swagger UI)
+- **OpenAPI Schema**: `/openapi.json`
+- **ReDoc**: `/redoc`
+
+## WebSocket Support (Future)
+- **Endpoint**: `/ws/chat/{session_id}`
+- **Purpose**: Real-time streaming responses
+- **Protocol**: WebSocket over HTTP/1.1
+
+## Versioning Strategy
+- **Current**: v1 (`/api/v1/`)
+- **Future**: v2 (`/api/v2/`) with backward compatibility
+- **Deprecation**: 6-month notice period for major changes

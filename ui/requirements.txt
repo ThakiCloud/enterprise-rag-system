@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+requests
+pydantic
+httpx
+# AGUIApp and related dependencies
+# Note: Replace with actual agno package when available
+# agno

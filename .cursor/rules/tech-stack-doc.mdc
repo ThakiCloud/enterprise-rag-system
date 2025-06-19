@@ -1,0 +1,251 @@
+---
+title: "Tech Stack Doc"
+description: "TODO: add description for Tech Stack Doc"
+alwaysApply: false
+---
+# Technology Stack Documentation
+
+## Core Technology Stack
+
+### Programming Language
+- **Python 3.11+**: Primary development language
+- **Reasoning**: Excellent ML/AI ecosystem, FastAPI compatibility, async support
+- **Key Features**: Type hints, async/await, dataclasses, pattern matching
+
+### Web Framework
+- **FastAPI 0.115+**: Modern, fast web framework
+- **Features**: 
+  - Automatic API documentation (OpenAPI/Swagger)
+  - Type hints integration with Pydantic
+  - Async/await support
+  - Built-in validation and serialization
+  - ASGI compatibility
+
+### UI Frameworks
+
+#### 1. Web Dashboard (Built-in)
+- **HTML5**: Semantic markup
+- **CSS3**: Modern styling with flexbox/grid
+- **Vanilla JavaScript**: No framework dependencies
+- **Features**: Responsive design, real-time updates, file upload
+
+#### 2. AGUIApp (Python UI)
+- **agno**: AI agent framework with built-in UI
+- **Streamlit-like**: Component-based interface
+- **Features**: Session management, real-time chat, backend integration
+
+#### 3. CLI Interface
+- **Python argparse**: Command-line argument parsing
+- **asyncio**: Asynchronous command processing
+- **Features**: Interactive shell, command history, auto-completion
+
+## AI/ML Stack
+
+### LLM Providers (Multi-Provider Support)
+```python
+# Supported Providers
+providers = {
+    "openai": "GPT-4o, GPT-3.5-turbo",
+    "anthropic": "Claude-3-Opus, Claude-3-Sonnet", 
+    "google": "Gemini-1.5-Pro-Latest",
+    "ollama": "Llama3, Mistral, CodeLlama",
+    "lm-studio": "User-selected models",
+    "vllm": "Custom deployments"
+}
+```
+
+### Agent Framework
+- **agno**: Multi-agent orchestration framework
+- **Features**:
+  - Agent factory pattern
+  - Tool integration (KnowledgeTools, ReasoningTools)
+  - Team coordination
+  - Session management
+  - Memory persistence
+
+### Vector Database
+- **LanceDB 0.23+**: Columnar vector storage
+- **Features**:
+  - Hybrid search (vector + BM25)
+  - HNSW indexing for ANN
+  - Local file-based storage
+  - Python-native integration
+
+### Document Processing
+- **pypdf**: PDF text extraction
+- **python-docx**: Microsoft Word processing
+- **BeautifulSoup4**: HTML/XML parsing for URLs
+- **Supported Formats**: PDF, DOCX, TXT, MD, HTML
+
+## Data Stack
+
+### Session Storage
+- **SQLite**: Lightweight relational database
+- **Features**:
+  - ACID compliance
+  - File-based storage
+  - Zero-configuration
+  - Python sqlite3 integration
+
+### Data Validation
+- **Pydantic 2.11+**: Data validation and serialization
+- **Features**:
+  - Type validation
+  - JSON schema generation
+  - Custom validators
+  - FastAPI integration
+
+### Search Engine
+- **Hybrid Search**: Vector + keyword search
+- **Vector Search**: Semantic similarity
+- **BM25**: Traditional keyword ranking
+- **Fusion**: Combined relevance scoring
+
+## Infrastructure Stack
+
+### Containerization
+- **Docker**: Container runtime
+- **Multi-stage builds**: Optimized image size
+- **Base Image**: python:3.11-slim
+- **Security**: Non-root user, minimal packages
+
+### Orchestration
+- **Kubernetes 1.25+**: Container orchestration
+- **Features**:
+  - Auto-scaling
+  - Health checks
+  - Service discovery
+  - Load balancing
+
+### Infrastructure as Code
+- **Terraform**: Cloud infrastructure management
+- **Helm**: Kubernetes package management
+- **Docker Compose**: Local development
+
+## Development Stack
+
+### Package Management
+- **pip**: Python package installer
+- **requirements.txt**: Dependency specification
+- **Virtual environments**: Isolated dependencies
+
+### Code Quality
+- **Type Hints**: Static type checking
+- **Pydantic**: Runtime type validation
+- **Python logging**: Structured logging
+- **Error handling**: Comprehensive exception management
+
+### Testing Framework
+- **pytest**: Testing framework
+- **httpx**: Async HTTP client for testing
+- **Factory patterns**: Test data generation
+- **Mocking**: External service simulation
+
+## Monitoring & Observability
+
+### Logging
+- **Python logging**: Built-in logging module
+- **Structured logs**: JSON format with metadata
+- **Log levels**: DEBUG, INFO, WARNING, ERROR, CRITICAL
+- **Context**: Request IDs, session tracking
+
+### Health Monitoring
+- **Health endpoints**: `/health/` for status checks
+- **Kubernetes probes**: Liveness and readiness
+- **Metrics collection**: Application and system metrics
+
+### Future Monitoring Stack
+- **Prometheus**: Metrics collection (planned)
+- **Grafana**: Metrics visualization (planned)
+- **OpenTelemetry**: Distributed tracing (planned)
+
+## Security Stack
+
+### Input Validation
+- **Pydantic**: Schema validation
+- **File validation**: Type and size checks
+- **URL validation**: Protocol and domain validation
+- **SQL injection protection**: ORM-based queries
+
+### Authentication (Planned)
+- **JWT**: JSON Web Tokens
+- **RBAC**: Role-based access control
+- **API keys**: Service authentication
+
+### Network Security
+- **CORS**: Cross-origin resource sharing
+- **HTTPS/TLS**: Encrypted communication
+- **Rate limiting**: DDoS protection (planned)
+
+## Development Tools
+
+### Local Development
+- **Docker Compose**: Multi-service orchestration
+- **Hot reload**: Automatic code reloading
+- **Environment variables**: Configuration management
+- **Local testing**: Isolated development environment
+
+### IDE Support
+- **Type hints**: Full IDE integration
+- **FastAPI**: Automatic API documentation
+- **Debugging**: Python debugger support
+- **Code completion**: IntelliSense support
+
+## Deployment Environments
+
+### Development
+- **Local**: Docker Compose
+- **Dependencies**: All services local
+- **Storage**: Local filesystem and SQLite
+- **Debugging**: Full logging and debugging enabled
+
+### Staging
+- **Kubernetes**: Minikube or cloud cluster
+- **Scaling**: Limited resources
+- **Testing**: Integration and performance testing
+- **Monitoring**: Basic health checks
+
+### Production
+- **Kubernetes**: Multi-zone cluster
+- **Auto-scaling**: HPA and VPA
+- **Storage**: Persistent volumes
+- **Monitoring**: Full observability stack
+- **Security**: TLS, authentication, authorization
+
+## Performance Considerations
+
+### Async Programming
+- **FastAPI**: ASGI-based async framework
+- **asyncio**: Concurrent I/O operations
+- **Async agents**: Non-blocking LLM calls
+- **Background tasks**: File processing
+
+### Caching Strategy
+- **Vector embeddings**: In-memory caching
+- **Model responses**: Redis caching (planned)
+- **Static assets**: CDN delivery (planned)
+
+### Scalability
+- **Stateless design**: Horizontal scaling
+- **Database sharding**: Vector DB partitioning
+- **Load balancing**: Multiple service instances
+- **Resource optimization**: Memory and CPU tuning
+
+## Version Management
+
+### Dependency Versions
+```txt
+fastapi>=0.115.0
+uvicorn>=0.30.0
+pydantic>=2.11.0
+lancedb>=0.23.0
+openai>=1.0.0
+anthropic>=0.8.0
+google-generativeai>=0.8.0
+agno>=0.1.0
+```
+
+### Python Version
+- **Minimum**: Python 3.11
+- **Recommended**: Python 3.12
+- **Features used**: Type hints, async/await, dataclasses

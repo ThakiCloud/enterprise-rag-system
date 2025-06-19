@@ -1,0 +1,280 @@
+---
+title: "Project Structure"
+description: "TODO: add description for Project Structure"
+alwaysApply: false
+---
+# Project Structure Guidelines
+
+## Root Directory Structure
+
+```
+enterprise-rag-system/
+├── backend/                      # FastAPI Backend Service
+├── ui/                          # AGUIApp Frontend Service  
+├── infrastructure/              # Deployment & Infrastructure
+├── tests/                       # Test Suites
+├── docs/                        # Documentation
+├── .cursor/                     # Cursor IDE Configuration
+├── .github/                     # GitHub Actions CI/CD
+├── config.env.example          # Environment Configuration Template
+├── run_backend.py              # Backend Execution Script
+├── run_ui.py                   # UI Execution Script
+├── init-cursor.sh              # Development Environment Setup
+├── README.md                   # Project Documentation
+├── LICENSE                     # License Information
+└── .gitignore                  # Git Ignore Rules
+```
+
+## Backend Structure (`backend/`)
+
+```
+backend/
+├── app/                         # Main Application Package
+│   ├── __init__.py             # Package Initialization
+│   ├── main.py                 # FastAPI App + Web Dashboard
+│   ├── cli.py                  # CLI Interface Implementation
+│   │
+│   ├── api/                    # REST API Layer
+│   │   ├── __init__.py
+│   │   └── router.py           # API Endpoints & Routing
+│   │
+│   ├── agents/                 # Agent Management
+│   │   ├── __init__.py
+│   │   └── factory.py          # Multi-LLM Agent Factory
+│   │
+│   ├── core/                   # Core Configuration
+│   │   ├── __init__.py
+│   │   ├── config.py           # Environment & LLM Config
+│   │   └── dependencies.py     # FastAPI Dependency Injection
+│   │
+│   ├── knowledge/              # Knowledge Management
+│   │   ├── __init__.py
+│   │   └── manager.py          # Document Processing Pipeline
+│   │
+│   └── schemas/                # Pydantic Data Models
+│       ├── __init__.py
+│       ├── document.py         # Document Schemas
+│       ├── query.py            # Query Request/Response
+│       └── session.py          # Session Management
+│
+├── requirements.txt            # Python Dependencies
+└── Dockerfile                 # Container Configuration
+```
+
+## UI Structure (`ui/`)
+
+```
+ui/
+├── __init__.py                 # Package Initialization
+├── main.py                     # AGUIApp Entry Point
+├── config.py                   # UI Configuration
+├── requirements.txt            # UI Dependencies
+└── Dockerfile                 # UI Container Configuration
+```
+
+## Infrastructure Structure (`infrastructure/`)
+
+```
+infrastructure/
+├── docker-compose.yml          # Local Development Stack
+├── k8s/                        # Kubernetes Manifests
+│   ├── deployment.yaml         # Application Deployment
+│   └── service.yaml            # Service Configuration
+└── terraform/                  # Infrastructure as Code
+    ├── main.tf                 # Main Terraform Configuration
+    └── variables.tf            # Terraform Variables
+```
+
+## Testing Structure (`tests/`)
+
+```
+tests/
+├── __init__.py                 # Test Package Initialization
+├── backend/                    # Backend Tests
+│   ├── __init__.py
+│   └── test_main.py           # Backend Unit Tests
+├── ui/                         # UI Tests
+│   ├── __init__.py
+│   └── test_ui.py             # UI Component Tests
+└── requirements.txt            # Testing Dependencies
+```
+
+## Documentation Structure (`docs/`)
+
+```
+docs/
+├── architecture.md             # System Architecture
+└── prd.md                     # Product Requirements Document
+```
+
+## Configuration Structure (`.cursor/`)
+
+```
+.cursor/
+└── rules/                      # Cursor IDE Rules
+    ├── prd.mdc                 # Product Requirements
+    ├── api-spec.mdc            # API Specifications
+    ├── architecture.mdc        # Architecture Guidelines
+    ├── backend-structure.mdc   # Backend Structure Rules
+    ├── tech-stack-doc.mdc      # Technology Stack
+    ├── project-structure.mdc   # Project Structure (this file)
+    ├── frontend-guidelines.mdc # Frontend Guidelines
+    ├── requirements.mdc        # Requirements Management
+    ├── security-checklist.mdc  # Security Guidelines
+    ├── schema-design.mdc       # Database Schema Design
+    ├── roadmap.mdc            # Development Roadmap
+    ├── user-flow.mdc          # User Experience Flow
+    ├── app-flow-doc.mdc       # Application Flow
+    ├── context.mdc            # Project Context
+    ├── design.mdc             # Design Guidelines
+    └── styling.mdc            # Styling Guidelines
+```
+
+## CI/CD Structure (`.github/`)
+
+```
+.github/
+└── workflows/                  # GitHub Actions
+    ├── ci-backend.yml          # Backend CI Pipeline
+    ├── ci-ui.yml              # UI CI Pipeline
+    └── cd.yml                 # Deployment Pipeline
+```
+
+## Runtime Directory Structure
+
+### Temporary Files (`tmp/`)
+```
+tmp/                            # Created at runtime
+├── uploads/                    # Uploaded Documents
+├── lancedb/                   # Vector Database Files
+└── enterprise_rag.db         # SQLite Session Storage
+```
+
+## File Naming Conventions
+
+### Python Files
+- **Modules**: `snake_case.py` (e.g., `knowledge_manager.py`)
+- **Classes**: `PascalCase` (e.g., `RAGAgent`, `QueryRequest`)
+- **Functions**: `snake_case` (e.g., `process_document`, `get_agent`)
+- **Constants**: `UPPER_SNAKE_CASE` (e.g., `MODEL_PROVIDER`, `API_KEY`)
+
+### Configuration Files
+- **Environment**: `.env`, `config.env.example`
+- **Docker**: `Dockerfile`, `docker-compose.yml`
+- **Kubernetes**: `deployment.yaml`, `service.yaml`
+- **Dependencies**: `requirements.txt`
+
+### Documentation Files
+- **Markdown**: `README.md`, `architecture.md`
+- **Cursor Rules**: `*.mdc` (markdown with cursor extensions)
+
+## Directory Organization Principles
+
+### 1. Separation by Concern
+- **Backend**: Pure API and business logic
+- **UI**: Frontend interfaces (web, CLI, AGUIApp)
+- **Infrastructure**: Deployment and operations
+- **Tests**: Isolated testing environment
+
+### 2. Modular Architecture
+- **Loose Coupling**: Independent modules with clear interfaces
+- **High Cohesion**: Related functionality grouped together
+- **Dependency Injection**: External dependencies injected at runtime
+
+### 3. Configuration Management
+- **Environment Variables**: External configuration
+- **Default Values**: Sensible defaults in code
+- **Validation**: Configuration validation at startup
+
+### 4. Scalability Considerations
+- **Horizontal Scaling**: Stateless service design
+- **Microservices Ready**: Clear service boundaries
+- **Container Native**: Docker-first architecture
+
+## Development Workflow
+
+### 1. Local Development
+```bash
+# Setup environment
+./init-cursor.sh
+
+# Backend development
+cd backend && python -m pip install -r requirements.txt
+python ../run_backend.py
+
+# UI development  
+cd ui && python -m pip install -r requirements.txt
+python ../run_ui.py
+
+# Full stack
+docker-compose up --build
+```
+
+### 2. Testing
+```bash
+# Backend tests
+cd tests && python -m pytest backend/
+
+# UI tests
+cd tests && python -m pytest ui/
+
+# Integration tests
+docker-compose -f docker-compose.test.yml up
+```
+
+### 3. Deployment
+```bash
+# Kubernetes
+kubectl apply -f infrastructure/k8s/
+
+# Terraform
+cd infrastructure/terraform && terraform apply
+```
+
+## File Permissions & Security
+
+### Executable Files
+- **Scripts**: `run_backend.py`, `run_ui.py`, `init-cursor.sh`
+- **Permissions**: `755` (executable by owner, readable by all)
+
+### Configuration Files
+- **Sensitive**: `.env` files (not in version control)
+- **Templates**: `config.env.example` (version controlled)
+- **Permissions**: `644` (readable by owner and group)
+
+### Data Directories
+- **Uploads**: `tmp/uploads/` (writable by application)
+- **Database**: `tmp/lancedb/` (writable by application)
+- **Logs**: Application logs (writable by application)
+
+## Version Control Strategy
+
+### Included in Git
+- Source code (`backend/`, `ui/`)
+- Configuration templates (`config.env.example`)
+- Documentation (`docs/`, `README.md`)
+- Infrastructure code (`infrastructure/`)
+- Tests (`tests/`)
+
+### Excluded from Git (`.gitignore`)
+- Environment files (`.env`, `*.env`)
+- Runtime data (`tmp/`, `__pycache__/`)
+- IDE files (`.vscode/`, `.idea/`)
+- OS files (`.DS_Store`, `Thumbs.db`)
+- Build artifacts (`*.pyc`, `dist/`)
+
+## Monitoring & Logging
+
+### Log File Structure
+```
+logs/                           # Application logs
+├── backend.log                 # Backend service logs
+├── ui.log                     # UI service logs
+├── error.log                  # Error logs
+└── access.log                 # HTTP access logs
+```
+
+### Metrics Collection
+- **Application Metrics**: Request latency, error rates
+- **Business Metrics**: Query accuracy, user engagement
+- **Infrastructure Metrics**: CPU, memory, disk usage

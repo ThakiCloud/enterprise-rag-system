@@ -1,0 +1,616 @@
+---
+title: "App Flow Doc"
+description: "TODO: add description for App Flow Doc"
+alwaysApply: false
+---
+# Application Flow Documentation
+
+## Overview
+
+The Enterprise RAG System provides three distinct user interfaces with different interaction patterns and workflows. This document details the application flows, user journeys, and system interactions across all interfaces.
+
+## System Architecture Flow
+
+### High-Level Application Flow
+```mermaid
+graph TD
+    A[User Input] --> B{Interface Type}
+    B -->|Web| C[Web Dashboard]
+    B -->|Desktop| D[AGUIApp]
+    B -->|Terminal| E[CLI Interface]
+    
+    C --> F[Document Management]
+    C --> G[Chat Interface]
+    C --> H[Session Management]
+    
+    D --> I[GUI Document Upload]
+    D --> J[GUI Chat]
+    D --> K[GUI Settings]
+    
+    E --> L[CLI Commands]
+    E --> M[Batch Processing]
+    
+    F --> N[Knowledge Manager]
+    G --> N
+    I --> N
+    J --> N
+    L --> N
+    M --> N
+    
+    N --> O[Agent Factory]
+    O --> P{Agent Type}
+    P -->|Simple| Q[RAG Agent]
+    P -->|Advanced| R[Reasoning Agent]
+    P -->|Research| S[Research Team]
+    
+    Q --> T[Vector Search]
+    R --> T
+    S --> T
+    
+    T --> U[LLM Processing]
+    U --> V[Response Generation]
+    V --> W[User Response]
+```
+
+## Interface-Specific Flows
+
+### 1. Web Dashboard Flow
+
+#### Document Management Flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant W as Web UI
+    participant API as Backend API
+    participant KM as Knowledge Manager
+    participant DB as Database
+    participant VDB as Vector DB
+    
+    U->>W: Access Document Page
+    W->>API: GET /api/documents
+    API->>DB: Query Documents
+    DB-->>API: Document List
+    API-->>W: Document Response
+    W-->>U: Display Documents
+    
+    U->>W: Upload Document
+    W->>API: POST /api/documents/upload
+    API->>KM: Process Document
+    KM->>KM: Extract Text
+    KM->>KM: Create Chunks
+    KM->>VDB: Store Embeddings
+    KM->>DB: Store Metadata
+    KM-->>API: Processing Complete
+    API-->>W: Upload Success
+    W-->>U: Show Success Message
+```
+
+#### Chat Interface Flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant W as Web UI
+    participant API as Backend API
+    participant SM as Session Manager
+    participant AF as Agent Factory
+    participant A as Agent
+    participant VDB as Vector DB
+    participant LLM as LLM Provider
+    
+    U->>W: Enter Chat
+    W->>API: GET /api/sessions
+    API->>SM: List Sessions
+    SM-->>API: Session List
+    API-->>W: Sessions Response
+    W-->>U: Display Chat History
+    
+    U->>W: Send Message
+    W->>API: POST /api/query
+    API->>SM: Create/Update Session
+    API->>AF: Create Agent
+    AF->>A: Initialize Agent
+    A->>VDB: Search Documents
+    VDB-->>A: Relevant Chunks
+    A->>LLM: Generate Response
+    LLM-->>A: AI Response
+    A-->>API: Formatted Response
+    API->>SM: Save Message
+    API-->>W: Stream Response
+    W-->>U: Display Response
+```
+
+#### Session Management Flow
+```mermaid
+flowchart TD
+    A[User Accesses Sessions] --> B[Load Session List]
+    B --> C{Session Exists?}
+    C -->|Yes| D[Display Sessions]
+    C -->|No| E[Show Empty State]
+    
+    D --> F{User Action}
+    F -->|Create New| G[Create Session Dialog]
+    F -->|Select Existing| H[Load Session Messages]
+    F -->|Delete Session| I[Confirm Deletion]
+    F -->|Rename Session| J[Edit Session Name]
+    
+    G --> K[Save New Session]
+    H --> L[Display Chat Interface]
+    I --> M[Delete Session & Messages]
+    J --> N[Update Session Name]
+    
+    K --> L
+    M --> B
+    N --> D
+    
+    L --> O[Chat Interface Active]
+    O --> P{New Message?}
+    P -->|Yes| Q[Process Message]
+    P -->|No| R[Wait for Input]
+    
+    Q --> S[Update Session Activity]
+    S --> R
+```
+
+### 2. AGUIApp (Desktop) Flow
+
+#### Application Startup Flow
+```mermaid
+flowchart TD
+    A[Launch AGUIApp] --> B[Initialize Configuration]
+    B --> C[Check Backend Connection]
+    C --> D{Backend Available?}
+    D -->|Yes| E[Load Main Interface]
+    D -->|No| F[Show Connection Error]
+    
+    F --> G[Settings Dialog]
+    G --> H[Configure Backend URL]
+    H --> C
+    
+    E --> I[Load Document List]
+    I --> J[Initialize Chat Interface]
+    J --> K[Ready for User Input]
+    
+    K --> L{User Action}
+    L -->|Upload Document| M[File Upload Dialog]
+    L -->|Start Chat| N[Chat Interface]
+    L -->|View Settings| O[Settings Panel]
+    L -->|View Documents| P[Document Manager]
+```
+
+#### Document Upload Flow (GUI)
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant GUI as AGUIApp
+    participant FS as File System
+    participant API as Backend API
+    participant KM as Knowledge Manager
+    
+    U->>GUI: Click Upload Button
+    GUI->>FS: Open File Dialog
+    FS-->>GUI: Selected Files
+    GUI->>GUI: Validate Files
+    GUI->>API: POST /api/documents/upload
+    API->>KM: Process Documents
+    
+    loop For Each Document
+        KM->>KM: Extract Text
+        KM->>KM: Create Chunks
+        KM->>KM: Generate Embeddings
+        KM->>API: Progress Update
+        API-->>GUI: Progress Notification
+        GUI-->>U: Update Progress Bar
+    end
+    
+    KM-->>API: Processing Complete
+    API-->>GUI: Upload Success
+    GUI-->>U: Show Success Dialog
+```
+
+#### Chat Flow (GUI)
+```mermaid
+flowchart TD
+    A[User Opens Chat] --> B[Initialize Chat Window]
+    B --> C[Load Session History]
+    C --> D[Display Messages]
+    D --> E[Focus Input Field]
+    
+    E --> F{User Input}
+    F -->|Text Message| G[Send Message]
+    F -->|File Attachment| H[Process File]
+    F -->|Settings Change| I[Update Configuration]
+    
+    G --> J[Display User Message]
+    J --> K[Show Typing Indicator]
+    K --> L[Send to Backend]
+    L --> M[Stream Response]
+    M --> N[Update Message Stream]
+    N --> O{Response Complete?}
+    O -->|No| M
+    O -->|Yes| P[Hide Typing Indicator]
+    P --> Q[Enable Input]
+    Q --> E
+    
+    H --> R[Validate File]
+    R --> S{Valid File?}
+    S -->|Yes| T[Upload File]
+    S -->|No| U[Show Error]
+    T --> V[Add to Context]
+    V --> G
+    U --> E
+```
+
+### 3. CLI Interface Flow
+
+#### Command Processing Flow
+```mermaid
+flowchart TD
+    A[CLI Command Entered] --> B[Parse Arguments]
+    B --> C{Valid Command?}
+    C -->|No| D[Show Help/Error]
+    C -->|Yes| E{Command Type}
+    
+    E -->|upload| F[Upload Command Flow]
+    E -->|query| G[Query Command Flow]
+    E -->|list| H[List Command Flow]
+    E -->|delete| I[Delete Command Flow]
+    E -->|chat| J[Interactive Chat Flow]
+    E -->|config| K[Configuration Flow]
+    
+    F --> L[Validate File Paths]
+    L --> M[Process Files]
+    M --> N[Show Progress]
+    N --> O[Display Results]
+    
+    G --> P[Process Query]
+    P --> Q[Display Response]
+    
+    H --> R[Fetch Data]
+    R --> S[Format Output]
+    S --> T[Display Table/List]
+    
+    I --> U[Confirm Deletion]
+    U --> V[Execute Deletion]
+    V --> W[Show Result]
+    
+    J --> X[Enter Chat Mode]
+    X --> Y[Interactive Loop]
+    
+    K --> Z[Show/Update Config]
+    
+    O --> AA[Exit]
+    Q --> AA
+    T --> AA
+    W --> AA
+    Y --> AA
+    Z --> AA
+    D --> AA
+```
+
+#### Interactive Chat Flow (CLI)
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant CLI as CLI Interface
+    participant API as Backend API
+    participant SM as Session Manager
+    
+    U->>CLI: python -m backend.cli chat
+    CLI->>API: GET /api/sessions
+    API->>SM: List Recent Sessions
+    SM-->>API: Session List
+    API-->>CLI: Sessions Response
+    CLI-->>U: Display Session Options
+    
+    U->>CLI: Select/Create Session
+    CLI->>API: POST /api/sessions (if new)
+    API->>SM: Create Session
+    SM-->>API: Session Created
+    API-->>CLI: Session ID
+    
+    loop Chat Interaction
+        CLI-->>U: Prompt for Input
+        U->>CLI: Enter Message
+        CLI->>API: POST /api/query
+        API-->>CLI: Stream Response
+        CLI-->>U: Display Response
+    end
+    
+    U->>CLI: Exit Command
+    CLI-->>U: Session Saved
+```
+
+#### Batch Processing Flow
+```mermaid
+flowchart TD
+    A[Batch Command] --> B[Parse File List]
+    B --> C{Files Valid?}
+    C -->|No| D[Show Errors]
+    C -->|Yes| E[Initialize Progress]
+    
+    E --> F[Process Files Sequentially]
+    F --> G{More Files?}
+    G -->|Yes| H[Process Next File]
+    G -->|No| I[Generate Summary]
+    
+    H --> J[Upload File]
+    J --> K[Update Progress]
+    K --> L{Success?}
+    L -->|Yes| M[Log Success]
+    L -->|No| N[Log Error]
+    
+    M --> G
+    N --> G
+    
+    I --> O[Display Results]
+    O --> P[Save Log File]
+    P --> Q[Exit]
+    
+    D --> Q
+```
+
+## Agent Interaction Flows
+
+### Simple RAG Agent Flow
+```mermaid
+sequenceDiagram
+    participant U as User Query
+    participant A as RAG Agent
+    participant VDB as Vector Database
+    participant LLM as LLM Provider
+    participant R as Response
+    
+    U->>A: Question + Context
+    A->>A: Preprocess Query
+    A->>VDB: Semantic Search
+    VDB-->>A: Relevant Chunks
+    A->>A: Rank & Filter Results
+    A->>LLM: Query + Context + Chunks
+    LLM-->>A: Generated Response
+    A->>A: Post-process Response
+    A-->>R: Final Answer + Sources
+```
+
+### Advanced Reasoning Agent Flow
+```mermaid
+sequenceDiagram
+    participant U as User Query
+    participant RA as Reasoning Agent
+    participant VDB as Vector Database
+    participant LLM as LLM Provider
+    participant R as Response
+    
+    U->>RA: Complex Question
+    RA->>RA: Analyze Query Complexity
+    RA->>RA: Break Down into Sub-questions
+    
+    loop For Each Sub-question
+        RA->>VDB: Targeted Search
+        VDB-->>RA: Relevant Context
+        RA->>LLM: Sub-question + Context
+        LLM-->>RA: Partial Answer
+        RA->>RA: Store Reasoning Step
+    end
+    
+    RA->>RA: Synthesize All Steps
+    RA->>LLM: Final Synthesis Request
+    LLM-->>RA: Comprehensive Answer
+    RA-->>R: Answer + Reasoning Chain
+```
+
+### Research Team Agent Flow
+```mermaid
+flowchart TD
+    A[Research Query] --> B[Team Coordinator]
+    B --> C[Assign Roles]
+    C --> D[Researcher Agent]
+    C --> E[Analyst Agent]
+    C --> F[Synthesizer Agent]
+    
+    D --> G[Gather Information]
+    E --> H[Analyze Data]
+    F --> I[Wait for Inputs]
+    
+    G --> J[Research Results]
+    H --> K[Analysis Results]
+    
+    J --> I
+    K --> I
+    
+    I --> L[Synthesize Findings]
+    L --> M[Generate Report]
+    M --> N[Quality Review]
+    N --> O{Quality Check}
+    O -->|Pass| P[Final Report]
+    O -->|Fail| Q[Request Revision]
+    
+    Q --> D
+    Q --> E
+    
+    P --> R[Deliver to User]
+```
+
+## Error Handling Flows
+
+### Document Processing Error Flow
+```mermaid
+flowchart TD
+    A[Document Upload] --> B[Validation]
+    B --> C{Valid?}
+    C -->|No| D[Return Validation Error]
+    C -->|Yes| E[Process Document]
+    
+    E --> F{Processing Success?}
+    F -->|No| G[Capture Error Details]
+    F -->|Yes| H[Store Successfully]
+    
+    G --> I{Error Type}
+    I -->|File Corrupt| J[File Corruption Error]
+    I -->|Extraction Failed| K[Text Extraction Error]
+    I -->|Embedding Failed| L[Embedding Generation Error]
+    I -->|Storage Failed| M[Database Storage Error]
+    
+    J --> N[Log Error & Notify User]
+    K --> N
+    L --> N
+    M --> N
+    
+    N --> O[Cleanup Partial Data]
+    O --> P[Return Error Response]
+    
+    H --> Q[Return Success Response]
+    D --> P
+    P --> R[End]
+    Q --> R
+```
+
+### Query Processing Error Flow
+```mermaid
+flowchart TD
+    A[User Query] --> B[Input Validation]
+    B --> C{Valid Input?}
+    C -->|No| D[Return Input Error]
+    C -->|Yes| E[Agent Processing]
+    
+    E --> F{Processing Success?}
+    F -->|Yes| G[Return Response]
+    F -->|No| H[Error Analysis]
+    
+    H --> I{Error Category}
+    I -->|No Documents| J[Empty Knowledge Base]
+    I -->|LLM Error| K[Provider Issue]
+    I -->|Search Error| L[Vector DB Issue]
+    I -->|Timeout| M[Processing Timeout]
+    
+    J --> N[Suggest Document Upload]
+    K --> O[Try Alternative Provider]
+    L --> P[Retry with Fallback]
+    M --> Q[Return Partial Results]
+    
+    O --> R{Retry Success?}
+    R -->|Yes| G
+    R -->|No| S[Return Provider Error]
+    
+    P --> T{Fallback Success?}
+    T -->|Yes| G
+    T -->|No| U[Return Search Error]
+    
+    N --> V[Return Guidance Message]
+    Q --> W[Return Timeout Message]
+    S --> X[Return Error Response]
+    U --> X
+    V --> X
+    W --> X
+    
+    D --> X
+    G --> Y[End]
+    X --> Y
+```
+
+## Session Management Flow
+
+### Session Lifecycle
+```mermaid
+stateDiagram-v2
+    [*] --> Created: Create Session
+    Created --> Active: First Message
+    Active --> Active: Exchange Messages
+    Active --> Idle: No Activity (5min)
+    Idle --> Active: New Message
+    Idle --> Archived: No Activity (24h)
+    Active --> Archived: Manual Archive
+    Archived --> Active: Restore Session
+    Archived --> Deleted: Manual Delete
+    Deleted --> [*]
+    
+    Created --> Deleted: Delete Empty Session
+    Active --> Deleted: Manual Delete
+```
+
+### Session Data Flow
+```mermaid
+flowchart TD
+    A[Session Created] --> B[Generate Session ID]
+    B --> C[Initialize Session Record]
+    C --> D[Store in Database]
+    
+    D --> E[Session Active]
+    E --> F{New Message}
+    F -->|Yes| G[Process Message]
+    F -->|No| H[Update Last Activity]
+    
+    G --> I[Store Message]
+    I --> J[Update Message Count]
+    J --> K[Update Last Activity]
+    K --> L[Generate Response]
+    L --> M[Store Response]
+    M --> N[Update Session Stats]
+    N --> E
+    
+    H --> O{Session Timeout?}
+    O -->|No| E
+    O -->|Yes| P[Mark as Idle]
+    P --> Q{Archive Timeout?}
+    Q -->|No| R[Keep Idle]
+    Q -->|Yes| S[Archive Session]
+    
+    R --> T{New Activity?}
+    T -->|Yes| E
+    T -->|No| Q
+    
+    S --> U[Move to Archive]
+    U --> V[Cleanup Temp Data]
+```
+
+## Performance Optimization Flows
+
+### Caching Strategy Flow
+```mermaid
+flowchart TD
+    A[User Request] --> B{Cache Hit?}
+    B -->|Yes| C[Return Cached Result]
+    B -->|No| D[Process Request]
+    
+    D --> E[Generate Response]
+    E --> F{Cacheable?}
+    F -->|Yes| G[Store in Cache]
+    F -->|No| H[Return Response]
+    
+    G --> I[Set TTL]
+    I --> J[Return Response]
+    
+    C --> K[Update Cache Stats]
+    J --> L[Log Performance]
+    H --> L
+    
+    K --> M[End]
+    L --> M
+```
+
+### Load Balancing Flow
+```mermaid
+flowchart TD
+    A[Incoming Request] --> B[Load Balancer]
+    B --> C{Check Server Health}
+    C -->|Healthy| D[Route to Server]
+    C -->|Unhealthy| E[Remove from Pool]
+    
+    D --> F[Process Request]
+    F --> G[Return Response]
+    
+    E --> H{Backup Servers?}
+    H -->|Yes| I[Route to Backup]
+    H -->|No| J[Return Service Error]
+    
+    I --> K[Process on Backup]
+    K --> L[Return Response]
+    
+    G --> M[Update Metrics]
+    L --> M
+    J --> N[Log Error]
+    
+    M --> O[End]
+    N --> O
+```
+
+This comprehensive application flow documentation provides detailed insights into how users interact with the Enterprise RAG System across all interfaces, including error handling, performance optimization, and system state management.

@@ -1,0 +1,285 @@
+---
+title: "Context"
+description: "TODO: add description for Context"
+alwaysApply: false
+---
+# Project Context
+
+## Project Overview
+
+**Enterprise RAG System** is a production-ready, multi-interface Retrieval-Augmented Generation platform designed for enterprise environments. The system combines advanced AI capabilities with robust infrastructure to provide intelligent document processing and question-answering services.
+
+### Vision Statement
+To democratize access to enterprise knowledge through AI-powered document understanding, making organizational information instantly accessible and actionable for all stakeholders.
+
+### Mission
+Deliver a scalable, secure, and user-friendly RAG system that transforms how enterprises interact with their knowledge bases, enabling faster decision-making and improved productivity.
+
+## Business Context
+
+### Market Opportunity
+- **Enterprise AI Market**: $50B+ market growing at 25% CAGR
+- **Document Management Pain**: 90% of enterprise data is unstructured
+- **Knowledge Worker Productivity**: 30% of time spent searching for information
+- **AI Adoption**: 80% of enterprises planning AI initiatives by 2025
+
+### Target Customers
+
+#### Primary Markets
+1. **Large Enterprises (1000+ employees)**
+   - Complex document repositories
+   - Multiple departments and use cases
+   - High security and compliance requirements
+   - Budget for premium AI solutions
+
+2. **Mid-Market Companies (100-1000 employees)**
+   - Growing document volumes
+   - Need for knowledge democratization
+   - Cost-conscious but value-driven
+   - Seeking competitive advantages
+
+3. **Technology Companies**
+   - Developer-friendly requirements
+   - API-first approach needs
+   - High technical sophistication
+   - Early AI adopters
+
+#### Secondary Markets
+- **Professional Services**: Law firms, consulting companies
+- **Healthcare Organizations**: Medical records and research
+- **Financial Services**: Regulatory documents and analysis
+- **Educational Institutions**: Research and academic content
+
+### Competitive Landscape
+
+#### Direct Competitors
+- **Notion AI**: Document-centric AI assistant
+- **Microsoft Copilot**: Enterprise AI integration
+- **Anthropic Claude for Work**: Enterprise AI platform
+- **OpenAI Enterprise**: Custom AI solutions
+
+#### Competitive Advantages
+1. **Multi-LLM Support**: Vendor independence and flexibility
+2. **Multiple Interfaces**: Web, CLI, and developer-friendly options
+3. **Open Architecture**: Customizable and extensible
+4. **Hybrid Deployment**: Cloud and on-premises options
+5. **Developer Experience**: API-first design with comprehensive tooling
+
+## Technical Context
+
+### Current Architecture Status
+
+#### ✅ Completed Components
+- **Multi-LLM Integration**: 6 providers (OpenAI, Anthropic, Google, Ollama, LM Studio, vLLM)
+- **RAG Pipeline**: Document processing, vectorization, hybrid search
+- **Agent System**: RAG, Reasoning, and Research Team agents
+- **User Interfaces**: Web dashboard, AGUIApp, CLI
+- **API Layer**: FastAPI with OpenAPI documentation
+- **Infrastructure**: Docker, Kubernetes, Terraform support
+
+#### 🔄 In Progress
+- **Security Enhancements**: JWT authentication, HTTPS/TLS
+- **Monitoring**: Prometheus, Grafana integration
+- **Performance Optimization**: Caching, connection pooling
+- **Advanced Error Handling**: Circuit breakers, retry mechanisms
+
+#### 📋 Planned
+- **Enterprise Features**: RBAC, multi-tenancy, audit logging
+- **Advanced AI**: Custom model training, knowledge graphs
+- **Integrations**: Enterprise SSO, third-party platforms
+- **Compliance**: SOC 2, GDPR, HIPAA frameworks
+
+### Technology Stack Rationale
+
+#### Core Technologies
+- **Python 3.11+**: Rich AI/ML ecosystem, enterprise adoption
+- **FastAPI**: Modern, fast, type-safe web framework
+- **LanceDB**: Columnar vector database with hybrid search
+- **SQLite**: Lightweight session storage
+- **Docker/Kubernetes**: Industry-standard containerization
+
+#### AI/ML Stack
+- **Multiple LLM Providers**: Risk mitigation and optimization
+- **agno Framework**: Agent orchestration and management
+- **Vector Embeddings**: Semantic search capabilities
+- **Hybrid Search**: Vector + keyword search fusion
+
+#### Infrastructure Choices
+- **Cloud-Native**: Kubernetes-first deployment
+- **Infrastructure as Code**: Terraform for reproducibility
+- **CI/CD**: GitHub Actions for automation
+- **Monitoring**: Prometheus/Grafana standard stack
+
+## Development Context
+
+### Team Structure
+- **Core Team**: 8-12 engineers across backend, frontend, DevOps, AI/ML
+- **Extended Team**: Product, design, security, compliance specialists
+- **Advisory**: AI researchers, enterprise architects, domain experts
+
+### Development Philosophy
+
+#### Principles
+1. **User-Centric Design**: Multiple interfaces for different user types
+2. **Developer Experience**: API-first, comprehensive documentation
+3. **Security by Design**: Built-in security controls and compliance
+4. **Scalability First**: Horizontal scaling from day one
+5. **Open Architecture**: Extensible and customizable platform
+
+#### Quality Standards
+- **Code Quality**: Type hints, comprehensive testing, code reviews
+- **Security**: OWASP compliance, regular security assessments
+- **Performance**: Sub-2-second response times, high availability
+- **Documentation**: API docs, user guides, deployment instructions
+- **Monitoring**: Comprehensive observability and alerting
+
+### Development Workflow
+
+#### Agile Methodology
+- **Sprint Length**: 2-week sprints
+- **Planning**: Quarterly roadmap, monthly feature planning
+- **Reviews**: Daily standups, sprint reviews, retrospectives
+- **Quality Gates**: Code review, security review, performance testing
+
+#### Release Strategy
+- **Versioning**: Semantic versioning (MAJOR.MINOR.PATCH)
+- **Deployment**: Blue-green deployments with rollback capability
+- **Testing**: Unit, integration, end-to-end, performance testing
+- **Monitoring**: Real-time monitoring with automated alerting
+
+## Operational Context
+
+### Deployment Models
+
+#### Cloud Deployment
+- **Public Cloud**: AWS, GCP, Azure support
+- **Managed Services**: Kubernetes clusters, managed databases
+- **Scalability**: Auto-scaling based on demand
+- **Global**: Multi-region deployment for performance
+
+#### On-Premises Deployment
+- **Air-Gapped**: Completely offline deployment option
+- **Hybrid**: Cloud management with on-premises data
+- **Compliance**: Meet strict data residency requirements
+- **Integration**: Existing enterprise infrastructure
+
+#### Development Environment
+- **Local**: Docker Compose for development
+- **Staging**: Kubernetes staging environment
+- **Testing**: Automated testing environments
+- **CI/CD**: GitHub Actions for automation
+
+### Support & Maintenance
+
+#### Support Tiers
+1. **Community**: Open source community support
+2. **Professional**: Business hours support with SLA
+3. **Enterprise**: 24/7 support with dedicated team
+4. **Premium**: Custom development and consulting
+
+#### Maintenance Schedule
+- **Security Updates**: Immediate for critical vulnerabilities
+- **Feature Updates**: Monthly minor releases
+- **Major Releases**: Quarterly with new features
+- **LTS Releases**: Annual long-term support versions
+
+## Regulatory & Compliance Context
+
+### Data Privacy
+- **GDPR**: European data protection compliance
+- **CCPA**: California consumer privacy compliance
+- **Data Residency**: Configurable data location controls
+- **Right to Deletion**: Automated data deletion capabilities
+
+### Security Standards
+- **SOC 2 Type II**: Security and availability controls
+- **ISO 27001**: Information security management
+- **OWASP**: Web application security standards
+- **NIST**: Cybersecurity framework alignment
+
+### Industry Compliance
+- **HIPAA**: Healthcare data protection (planned)
+- **SOX**: Financial reporting compliance (planned)
+- **FedRAMP**: Government cloud security (future)
+- **PCI DSS**: Payment data security (if applicable)
+
+## Business Model Context
+
+### Revenue Streams
+1. **SaaS Subscriptions**: Monthly/annual recurring revenue
+2. **Enterprise Licenses**: On-premises deployment licenses
+3. **Professional Services**: Implementation and consulting
+4. **Support & Training**: Premium support and education
+
+### Pricing Strategy
+- **Freemium**: Basic features with usage limits
+- **Professional**: Advanced features for teams
+- **Enterprise**: Full feature set with enterprise support
+- **Custom**: Tailored solutions for large organizations
+
+### Go-to-Market Strategy
+- **Product-Led Growth**: Self-service onboarding and trial
+- **Enterprise Sales**: Direct sales for large accounts
+- **Partner Channel**: System integrators and consultants
+- **Developer Community**: Open source and developer advocacy
+
+## Risk Assessment
+
+### Technical Risks
+- **LLM Provider Dependencies**: Mitigated by multi-provider support
+- **Scalability Challenges**: Addressed through cloud-native architecture
+- **Security Vulnerabilities**: Ongoing security assessments and updates
+- **Performance Issues**: Continuous monitoring and optimization
+
+### Business Risks
+- **Market Competition**: Rapid innovation and differentiation
+- **Regulatory Changes**: Proactive compliance and legal monitoring
+- **Economic Downturns**: Flexible pricing and cost optimization
+- **Talent Retention**: Competitive compensation and growth opportunities
+
+### Operational Risks
+- **Service Outages**: High availability and disaster recovery
+- **Data Loss**: Comprehensive backup and recovery procedures
+- **Security Breaches**: Multi-layered security controls
+- **Compliance Violations**: Regular audits and compliance monitoring
+
+## Success Metrics
+
+### Technical KPIs
+- **Availability**: 99.9% uptime target
+- **Performance**: p95 response time < 2 seconds
+- **Scalability**: Support for 100,000+ documents
+- **Security**: Zero critical vulnerabilities
+- **Quality**: 90%+ test coverage
+
+### Business KPIs
+- **User Adoption**: Monthly active users growth
+- **Customer Satisfaction**: Net Promoter Score > 50
+- **Revenue Growth**: Annual recurring revenue targets
+- **Market Share**: Position in enterprise AI market
+- **Customer Retention**: Churn rate < 5% annually
+
+### Product KPIs
+- **Feature Adoption**: Usage of key features
+- **User Engagement**: Session duration and frequency
+- **API Usage**: Developer adoption metrics
+- **Support Metrics**: Resolution time and satisfaction
+- **Documentation**: Usage and feedback scores
+
+## Future Vision
+
+### 3-Year Goals
+- **Market Position**: Top 3 enterprise RAG platform
+- **Customer Base**: 1000+ enterprise customers
+- **Revenue**: $100M+ annual recurring revenue
+- **Technology**: Next-generation AI capabilities
+- **Global Presence**: Multi-region deployment
+
+### Innovation Roadmap
+- **Multimodal AI**: Vision, audio, and text integration
+- **Knowledge Graphs**: Semantic knowledge representation
+- **Custom Models**: Domain-specific model training
+- **Autonomous Agents**: Self-improving AI systems
+- **Quantum Computing**: Future-ready architecture
+
+This context provides the foundation for all development decisions, ensuring alignment with business objectives, technical requirements, and market opportunities while maintaining focus on user value and enterprise needs.

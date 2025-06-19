@@ -1,0 +1,514 @@
+---
+title: "Schema Design"
+description: "TODO: add description for Schema Design"
+alwaysApply: false
+---
+# Schema Design Guidelines
+
+## Overview
+
+The Enterprise RAG System uses a combination of Pydantic models for API validation and serialization, SQLite for session storage, and LanceDB for vector storage. This document outlines the schema design principles and data models.
+
+## Schema Design Principles
+
+### 1. Type Safety
+- **Pydantic Models**: All API endpoints use Pydantic for validation
+- **Type Hints**: Comprehensive type annotations throughout codebase
+- **Runtime Validation**: Automatic validation of input/output data
+- **Schema Evolution**: Versioned schemas for backward compatibility
+
+### 2. Data Consistency
+- **Single Source of Truth**: Each data entity has one authoritative source
+- **Referential Integrity**: Proper relationships between entities
+- **Validation Rules**: Business logic enforced at schema level
+- **Error Handling**: Graceful handling of validation errors
+
+### 3. Performance Optimization
+- **Efficient Serialization**: Fast JSON encoding/decoding
+- **Minimal Data Transfer**: Only necessary fields in API responses
+- **Indexing Strategy**: Proper indexing for query performance
+- **Caching-Friendly**: Schema designed for effective caching
+
+## API Schema Models
+
+### Document Schemas (`backend/app/schemas/document.py`)
+
+#### Document Upload Request
+```python
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List
+from datetime import datetime
+
+class DocumentUpload(BaseModel):
+    """Schema for document upload requests"""
+    filename: str = Field(..., min_length=1, max_length=255)
+    content_type: str = Field(..., regex=r'^(application|text)/')
+    size: int = Field(..., gt=0, le=10_485_760)  # 10MB limit
+    
+    @validator('filename')
+    def validate_filename(cls, v):
+        allowed_extensions = ['.pdf', '.docx', '.txt', '.md']
+        if not any(v.lower().endswith(ext) for ext in allowed_extensions):
+            raise ValueError('Unsupported file type')
+        return v
+
+class DocumentMetadata(BaseModel):
+    """Document metadata after processing"""
+    document_id: str = Field(..., description="Unique document identifier")
+    filename: str
+    content_type: str
+    size: int
+    upload_time: datetime
+    processing_status: str = Field(..., regex=r'^(pending|processing|completed|failed)$')
+    chunk_count: Optional[int] = Field(None, ge=0)
+    error_message: Optional[str] = None
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+class DocumentResponse(BaseModel):
+    """Response after document upload"""
+    success: bool
+    document_id: Optional[str] = None
+    message: str
+    metadata: Optional[DocumentMetadata] = None
+```
+
+#### URL Processing Schema
+```python
+class URLRequest(BaseModel):
+    """Schema for URL content processing"""
+    url: str = Field(..., regex=r'^https?://.+')
+    
+    @validator('url')
+    def validate_url(cls, v):
+        from urllib.parse import urlparse
+        parsed = urlparse(v)
+        if not all([parsed.scheme, parsed.netloc]):
+            raise ValueError('Invalid URL format')
+        return v
+
+class URLResponse(BaseModel):
+    """Response after URL processing"""
+    success: bool
+    url: str
+    title: Optional[str] = None
+    content_length: Optional[int] = None
+    processing_time: Optional[float] = None
+    message: str
+```
+
+### Query Schemas (`backend/app/schemas/query.py`)
+
+#### Query Request/Response
+```python
+class QueryRequest(BaseModel):
+    """Schema for query requests"""
+    question: str = Field(..., min_length=1, max_length=2000)
+    use_advanced_reasoning: bool = Field(False, description="Enable multi-agent reasoning")
+    session_id: Optional[str] = Field(None, description="Session ID for context")
+    max_sources: int = Field(5, ge=1, le=20, description="Maximum number of sources")
+    
+    @validator('question')
+    def validate_question(cls, v):
+        # Remove excessive whitespace
+        return ' '.join(v.split())
+
+class Source(BaseModel):
+    """Schema for source attribution"""
+    document_id: str
+    filename: str
+    chunk_id: str
+    content: str = Field(..., max_length=1000)  # Truncated for display
+    similarity_score: float = Field(..., ge=0.0, le=1.0)
+    page_number: Optional[int] = Field(None, ge=1)
+    
+class QueryResponse(BaseModel):
+    """Schema for query responses"""
+    answer: str
+    sources: List[Source] = Field(default_factory=list)
+    reasoning_steps: Optional[List[str]] = Field(None, description="Chain of thought steps")
+    session_id: str
+    processing_time: float = Field(..., ge=0.0)
+    model_used: str
+    confidence_score: Optional[float] = Field(None, ge=0.0, le=1.0)
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "answer": "Based on the provided documents...",
+                "sources": [
+                    {
+                        "document_id": "doc_123",
+                        "filename": "company_policy.pdf",
+                        "chunk_id": "chunk_456",
+                        "content": "The company policy states...",
+                        "similarity_score": 0.95,
+                        "page_number": 5
+                    }
+                ],
+                "session_id": "session_789",
+                "processing_time": 1.23,
+                "model_used": "gpt-4",
+                "confidence_score": 0.87
+            }
+        }
+```
+
+### Session Schemas (`backend/app/schemas/session.py`)
+
+#### Session Management
+```python
+class SessionCreate(BaseModel):
+    """Schema for creating new sessions"""
+    name: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+
+class SessionInfo(BaseModel):
+    """Schema for session information"""
+    session_id: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    created_at: datetime
+    last_activity: datetime
+    message_count: int = Field(..., ge=0)
+    is_active: bool = True
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+class SessionResponse(BaseModel):
+    """Schema for session API responses"""
+    session_id: str
+    message: str
+    session_info: Optional[SessionInfo] = None
+
+class SessionList(BaseModel):
+    """Schema for listing sessions"""
+    sessions: List[SessionInfo]
+    total_count: int = Field(..., ge=0)
+    active_count: int = Field(..., ge=0)
+```
+
+## Database Schemas
+
+### SQLite Session Storage
+
+#### Sessions Table
+```sql
+CREATE TABLE sessions (
+    session_id TEXT PRIMARY KEY,
+    name TEXT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX idx_sessions_created_at ON sessions(created_at);
+CREATE INDEX idx_sessions_last_activity ON sessions(last_activity);
+CREATE INDEX idx_sessions_active ON sessions(is_active);
+```
+
+#### Messages Table
+```sql
+CREATE TABLE messages (
+    message_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    message_type TEXT NOT NULL CHECK (message_type IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    metadata TEXT, -- JSON metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_messages_session_id ON messages(session_id);
+CREATE INDEX idx_messages_created_at ON messages(created_at);
+CREATE INDEX idx_messages_type ON messages(message_type);
+```
+
+#### Documents Table
+```sql
+CREATE TABLE documents (
+    document_id TEXT PRIMARY KEY,
+    filename TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processing_status TEXT DEFAULT 'pending' 
+        CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
+    chunk_count INTEGER,
+    error_message TEXT,
+    metadata TEXT -- JSON metadata
+);
+
+CREATE INDEX idx_documents_status ON documents(processing_status);
+CREATE INDEX idx_documents_upload_time ON documents(upload_time);
+CREATE INDEX idx_documents_filename ON documents(filename);
+```
+
+### LanceDB Vector Storage Schema
+
+#### Document Chunks Table
+```python
+# LanceDB schema for document chunks
+import lancedb
+import pyarrow as pa
+
+document_chunks_schema = pa.schema([
+    pa.field("chunk_id", pa.string()),
+    pa.field("document_id", pa.string()),
+    pa.field("filename", pa.string()),
+    pa.field("content", pa.string()),
+    pa.field("embedding", pa.list_(pa.float32(), 1536)),  # OpenAI embedding size
+    pa.field("chunk_index", pa.int32()),
+    pa.field("page_number", pa.int32()),
+    pa.field("created_at", pa.timestamp('ms')),
+    pa.field("metadata", pa.string()),  # JSON metadata
+])
+
+# Create table with schema
+db = lancedb.connect("tmp/lancedb")
+table = db.create_table("document_chunks", schema=document_chunks_schema)
+```
+
+#### Vector Search Configuration
+```python
+# Search configuration for LanceDB
+search_config = {
+    "metric": "cosine",  # Cosine similarity for semantic search
+    "nprobes": 20,       # Number of probes for ANN search
+    "refine_factor": 10, # Refinement factor for accuracy
+}
+
+# Hybrid search with BM25
+hybrid_config = {
+    "vector_column": "embedding",
+    "text_column": "content",
+    "alpha": 0.7,  # Weight for vector search (0.3 for BM25)
+}
+```
+
+## Schema Validation Patterns
+
+### Custom Validators
+
+#### File Validation
+```python
+from pydantic import validator
+import magic
+
+class FileUploadSchema(BaseModel):
+    filename: str
+    content: bytes
+    
+    @validator('content')
+    def validate_file_content(cls, v, values):
+        """Validate file content matches declared type"""
+        if 'filename' in values:
+            filename = values['filename']
+            mime_type = magic.from_buffer(v, mime=True)
+            
+            # Validate PDF files
+            if filename.endswith('.pdf') and mime_type != 'application/pdf':
+                raise ValueError('File content does not match PDF format')
+            
+            # Validate DOCX files
+            if filename.endswith('.docx') and mime_type != 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                raise ValueError('File content does not match DOCX format')
+        
+        return v
+```
+
+#### URL Validation
+```python
+import requests
+from urllib.parse import urlparse
+
+@validator('url')
+def validate_url_accessibility(cls, v):
+    """Validate URL is accessible"""
+    try:
+        parsed = urlparse(v)
+        if parsed.scheme not in ['http', 'https']:
+            raise ValueError('Only HTTP/HTTPS URLs are supported')
+        
+        # Optional: Check if URL is accessible
+        # response = requests.head(v, timeout=5)
+        # if response.status_code >= 400:
+        #     raise ValueError('URL is not accessible')
+        
+        return v
+    except requests.RequestException:
+        raise ValueError('URL validation failed')
+```
+
+### Error Response Schemas
+
+#### Standard Error Response
+```python
+class ErrorResponse(BaseModel):
+    """Standard error response schema"""
+    error: bool = True
+    error_code: str = Field(..., description="Machine-readable error code")
+    message: str = Field(..., description="Human-readable error message")
+    details: Optional[dict] = Field(None, description="Additional error details")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    request_id: Optional[str] = Field(None, description="Request tracking ID")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "error": True,
+                "error_code": "VALIDATION_ERROR",
+                "message": "Invalid file format",
+                "details": {
+                    "field": "filename",
+                    "constraint": "Must be PDF, DOCX, TXT, or MD"
+                },
+                "timestamp": "2024-01-01T12:00:00Z",
+                "request_id": "req_123456"
+            }
+        }
+
+class ValidationErrorResponse(BaseModel):
+    """Validation error response with field details"""
+    error: bool = True
+    error_code: str = "VALIDATION_ERROR"
+    message: str = "Validation failed"
+    validation_errors: List[dict] = Field(..., description="Field-specific validation errors")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "error": True,
+                "error_code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "validation_errors": [
+                    {
+                        "field": "question",
+                        "message": "Question cannot be empty",
+                        "type": "value_error.missing"
+                    }
+                ]
+            }
+        }
+```
+
+## Schema Evolution Strategy
+
+### Versioning Approach
+```python
+from enum import Enum
+
+class APIVersion(str, Enum):
+    V1 = "v1"
+    V2 = "v2"
+
+class VersionedQueryRequest(BaseModel):
+    """Versioned query request with backward compatibility"""
+    question: str
+    use_advanced_reasoning: bool = False
+    
+    # V2 additions
+    context_window: Optional[int] = Field(None, ge=1000, le=32000)
+    response_format: Optional[str] = Field("text", regex=r'^(text|json|markdown)$')
+    
+    class Config:
+        # Allow extra fields for forward compatibility
+        extra = "ignore"
+```
+
+### Migration Strategies
+```python
+def migrate_session_schema_v1_to_v2(session_data: dict) -> dict:
+    """Migrate session data from v1 to v2 schema"""
+    # Add new fields with defaults
+    session_data.setdefault('metadata', {})
+    session_data.setdefault('tags', [])
+    
+    # Transform existing fields if needed
+    if 'created_time' in session_data:
+        session_data['created_at'] = session_data.pop('created_time')
+    
+    return session_data
+```
+
+## Performance Considerations
+
+### Database Optimization
+```sql
+-- Composite indexes for common queries
+CREATE INDEX idx_messages_session_created ON messages(session_id, created_at);
+CREATE INDEX idx_documents_status_upload ON documents(processing_status, upload_time);
+
+-- Partial indexes for active sessions
+CREATE INDEX idx_active_sessions ON sessions(last_activity) WHERE is_active = TRUE;
+```
+
+### Pydantic Optimization
+```python
+from pydantic import BaseModel
+
+class OptimizedModel(BaseModel):
+    """Optimized model configuration"""
+    
+    class Config:
+        # Faster validation
+        validate_assignment = False
+        use_enum_values = True
+        
+        # Memory optimization
+        keep_untouched = (cached_property,)
+        
+        # JSON optimization
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+            UUID: lambda v: str(v),
+        }
+```
+
+## Security Considerations
+
+### Input Sanitization
+```python
+from pydantic import validator
+import bleach
+
+@validator('content', pre=True)
+def sanitize_content(cls, v):
+    """Sanitize HTML content"""
+    if isinstance(v, str):
+        # Remove potentially dangerous HTML
+        return bleach.clean(v, tags=[], strip=True)
+    return v
+```
+
+### Data Masking
+```python
+class SensitiveDataModel(BaseModel):
+    """Model with sensitive data handling"""
+    user_id: str
+    email: str
+    
+    def dict(self, **kwargs):
+        """Override dict to mask sensitive data in logs"""
+        data = super().dict(**kwargs)
+        if kwargs.get('mask_sensitive', False):
+            data['email'] = self._mask_email(data['email'])
+        return data
+    
+    @staticmethod
+    def _mask_email(email: str) -> str:
+        """Mask email for logging"""
+        parts = email.split('@')
+        if len(parts) == 2:
+            return f"{parts[0][:2]}***@{parts[1]}"
+        return "***@***.***"
+```
+
+This schema design ensures type safety, performance, and maintainability while providing clear contracts for all API interactions and data storage operations.

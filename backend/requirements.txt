@@ -1,0 +1,20 @@
+fastapi
+uvicorn[standard]
+python-multipart
+openai
+anthropic
+google-generativeai
+lancedb
+python-docx
+pypdf
+beautifulsoup4
+requests
+pydantic
+httpx
+sqlalchemy
+agno
+
+# Additional dependencies for enhanced functionality
+aiofiles
+python-jose[cryptography]
+passlib[bcrypt]

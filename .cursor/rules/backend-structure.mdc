@@ -1,0 +1,230 @@
+---
+title: "Backend Structure"
+description: "TODO: add description for Backend Structure"
+alwaysApply: false
+---
+# Backend Structure Guidelines
+
+## Directory Structure
+
+```
+backend/
+├── app/                          # Main application package
+│   ├── __init__.py              # Package initialization
+│   ├── main.py                  # FastAPI app + web dashboard
+│   ├── cli.py                   # CLI interface implementation
+│   │
+│   ├── api/                     # API layer
+│   │   ├── __init__.py
+│   │   └── router.py            # REST endpoints and routing
+│   │
+│   ├── agents/                  # Agent management
+│   │   ├── __init__.py
+│   │   └── factory.py           # Multi-LLM agent factory
+│   │
+│   ├── core/                    # Core configuration
+│   │   ├── __init__.py
+│   │   ├── config.py            # Environment and LLM config
+│   │   └── dependencies.py      # FastAPI dependency injection
+│   │
+│   ├── knowledge/               # Knowledge management
+│   │   ├── __init__.py
+│   │   └── manager.py           # Document processing pipeline
+│   │
+│   └── schemas/                 # Data models
+│       ├── __init__.py
+│       ├── document.py          # Document-related schemas
+│       ├── query.py             # Query request/response schemas
+│       └── session.py           # Session management schemas
+│
+├── requirements.txt             # Python dependencies
+└── Dockerfile                  # Container configuration
+```
+
+## Module Responsibilities
+
+### 1. main.py - Application Entry Point
+- **FastAPI Application**: ASGI app initialization
+- **Middleware Setup**: CORS, error handling, logging
+- **Web Dashboard**: Embedded HTML/CSS/JS interface
+- **Startup Events**: Service initialization
+- **Health Checks**: System status endpoints
+
+### 2. api/router.py - REST API Layer
+```python
+# Core endpoints
+POST /api/v1/query/              # Query processing
+POST /api/v1/upload-document/    # File upload
+POST /api/v1/add-url/           # URL processing
+
+# Session management
+GET    /api/v1/sessions/         # List sessions
+GET    /api/v1/sessions/{id}     # Get session
+DELETE /api/v1/sessions/{id}     # Delete session
+
+# System information
+GET /api/v1/knowledge-base/stats # KB statistics
+```
+
+### 3. agents/factory.py - Agent Management
+- **Model Factory**: Creates LLM instances by provider
+- **Agent Factory**: Initializes specialized agents
+- **Knowledge Base**: Vector database setup
+- **Agent Types**:
+  - `RAG Agent`: Standard retrieval-augmented generation
+  - `Reasoning Agent`: Advanced analysis with CoT
+  - `Research Team`: Multi-agent coordination
+
+### 4. core/config.py - Configuration Management
+```python
+# Supported LLM Providers
+MODEL_PROVIDER = "openai" | "anthropic" | "google" | "ollama" | "lm-studio" | "vllm"
+
+# Provider-specific configurations
+OPENAI_API_KEY, OPENAI_MODEL_NAME
+ANTHROPIC_API_KEY, ANTHROPIC_MODEL_NAME
+GOOGLE_API_KEY, GOOGLE_MODEL_NAME
+OLLAMA_BASE_URL, OLLAMA_MODEL_NAME
+LM_STUDIO_BASE_URL
+CUSTOM_API_BASE_URL, CUSTOM_API_KEY, CUSTOM_MODEL_NAME
+```
+
+### 5. core/dependencies.py - Dependency Injection
+- **Singleton Pattern**: Shared resources (knowledge base, agents)
+- **Lazy Loading**: Heavy objects initialized on first use
+- **Resource Management**: Proper cleanup and disposal
+- **FastAPI Dependencies**: Injectable services
+
+### 6. knowledge/manager.py - Document Processing
+- **File Processing**: PDF, DOCX, TXT, MD support
+- **URL Scraping**: Web content extraction with BeautifulSoup
+- **Vector Storage**: LanceDB integration with hybrid search
+- **Validation**: File type, size, and content validation
+- **Error Handling**: Comprehensive exception management
+- **Logging**: Detailed processing logs
+
+### 7. schemas/ - Data Models
+```python
+# query.py
+class QueryRequest(BaseModel):
+    question: str
+    session_id: Optional[str]
+    use_advanced_reasoning: Optional[bool] = False
+
+class QueryResponse(BaseModel):
+    query: str
+    response: str
+    session_id: str
+    sources: List[Dict[str, Any]]
+    reasoning_steps: Optional[List[str]]
+    timestamp: str
+    status: str
+```
+
+### 8. cli.py - Command Line Interface
+- **Interactive Shell**: Command-based interaction
+- **Available Commands**:
+  - `/help`: Show available commands
+  - `/info`: Knowledge base statistics
+  - `/url <url>`: Add URL content
+  - `/reasoning`: Toggle advanced reasoning
+  - `/session`: Show session information
+  - `/cleanup`: Clean temporary files
+  - `/quit`: Exit CLI
+
+## Code Organization Principles
+
+### 1. Separation of Concerns
+- **API Layer**: HTTP request/response handling
+- **Business Logic**: Agent coordination and processing
+- **Data Layer**: Storage and retrieval operations
+- **Configuration**: Environment and provider settings
+
+### 2. Dependency Injection Pattern
+```python
+# Dependencies are injected at the FastAPI route level
+@router.post("/query/")
+async def query_knowledge(
+    request: QueryRequest,
+    rag_agent: Agent = Depends(get_rag_agent),
+    research_team: Team = Depends(get_research_team)
+):
+```
+
+### 3. Error Handling Strategy
+- **HTTP Exceptions**: Proper status codes and messages
+- **Validation Errors**: Pydantic model validation
+- **Business Logic Errors**: Custom exception classes
+- **Logging**: Structured error logging with context
+
+### 4. Async/Await Pattern
+- **I/O Operations**: File processing, API calls
+- **Database Operations**: Vector search, session storage
+- **Agent Processing**: LLM API calls
+- **Concurrent Processing**: Multiple document uploads
+
+## Configuration Management
+
+### Environment Variables
+```bash
+# LLM Provider Selection
+MODEL_PROVIDER=openai|anthropic|google|ollama|lm-studio|vllm
+
+# API Keys (provider-specific)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_API_KEY=...
+
+# Model Names
+OPENAI_MODEL_NAME=gpt-4o
+ANTHROPIC_MODEL_NAME=claude-3-opus-20240229
+GOOGLE_MODEL_NAME=gemini-1.5-pro-latest
+
+# Local/Custom Providers
+OLLAMA_BASE_URL=http://localhost:11434
+LM_STUDIO_BASE_URL=http://localhost:1234/v1
+CUSTOM_API_BASE_URL=http://localhost:8000/v1
+```
+
+### File System Structure
+```
+tmp/                             # Temporary files
+├── uploads/                     # Uploaded documents
+├── lancedb/                     # Vector database files
+└── enterprise_rag.db           # SQLite session storage
+```
+
+## Testing Strategy
+
+### Unit Tests
+- **Agent Factory**: LLM provider creation
+- **Knowledge Manager**: Document processing
+- **API Endpoints**: Request/response validation
+- **Schema Validation**: Pydantic model testing
+
+### Integration Tests
+- **End-to-End**: Complete query processing flow
+- **Database**: Vector search and session storage
+- **File Processing**: Document upload and parsing
+- **LLM Integration**: Provider-specific testing
+
+### Performance Tests
+- **Load Testing**: Concurrent request handling
+- **Memory Usage**: Large document processing
+- **Response Time**: Query processing latency
+- **Scalability**: Multi-user session management
+
+## Deployment Considerations
+
+### Docker Configuration
+- **Multi-stage Build**: Optimized image size
+- **Security**: Non-root user, minimal base image
+- **Environment**: Configurable via environment variables
+- **Health Checks**: Container health monitoring
+
+### Production Settings
+- **Logging Level**: INFO or WARNING in production
+- **Debug Mode**: Disabled for security
+- **CORS**: Restricted origins in production
+- **File Limits**: Appropriate size restrictions
+- **Rate Limiting**: DDoS protection (planned)

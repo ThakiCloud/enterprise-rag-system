@@ -1,0 +1,385 @@
+---
+title: "Frontend Guidelines"
+description: "TODO: add description for Frontend Guidelines"
+alwaysApply: false
+---
+# Frontend Guidelines
+
+## Multi-Interface Strategy
+
+### 1. Web Dashboard (Built-in HTML/CSS/JS)
+- **Target Users**: General users, non-developers
+- **Access**: `http://localhost:8000/`
+- **Technology**: Vanilla HTML5, CSS3, JavaScript ES6+
+- **Features**: Document upload, URL processing, real-time chat, settings
+
+### 2. AGUIApp UI (Python-based)
+- **Target Users**: Rapid prototyping, Python developers
+- **Access**: `http://localhost:8501/`
+- **Technology**: agno framework (Streamlit-like components)
+- **Features**: Session management, backend integration, agent interaction
+
+### 3. CLI Interface (Command-line)
+- **Target Users**: Developers, system administrators
+- **Access**: `python run_backend.py --cli`
+- **Technology**: Python asyncio, argparse
+- **Features**: Interactive commands, debugging, system management
+
+## Web Dashboard Design Principles
+
+### Visual Design
+- **Color Scheme**: 
+  - Primary: `#4CAF50` (green gradient)
+  - Secondary: `#667eea` to `#764ba2` (purple gradient)
+  - Background: White with subtle shadows
+  - Text: `#333` for readability
+
+### Typography
+- **Font Stack**: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
+- **Hierarchy**: Clear heading sizes (2.5em, 1.2em, 1em)
+- **Readability**: Line height 1.6, adequate contrast ratios
+
+### Layout Principles
+- **Responsive Design**: Mobile-first approach
+- **Grid System**: Flexbox for layout management
+- **Spacing**: Consistent padding and margins (8px, 12px, 20px, 30px)
+- **Component-based**: Reusable UI components
+
+### Component Architecture
+
+#### 1. Header Component
+```css
+.header {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+```
+
+#### 2. Sidebar Component
+```css
+.sidebar {
+    width: 300px;
+    background: #f8f9fa;
+    padding: 30px;
+    border-right: 1px solid #e9ecef;
+}
+```
+
+#### 3. Form Components
+```css
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    transition: border-color 0.3s;
+}
+
+.form-control:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+```
+
+#### 4. Button Components
+```css
+.btn {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+}
+```
+
+### JavaScript Architecture
+
+#### Event-Driven Programming
+```javascript
+// File upload handling
+async function uploadFiles() {
+    const fileInput = document.getElementById('fileInput');
+    const files = fileInput.files;
+    
+    for (let file of files) {
+        await uploadSingleFile(file);
+    }
+}
+
+// Query processing
+async function sendQuery() {
+    const question = document.getElementById('questionInput').value;
+    const useAdvancedReasoning = document.getElementById('advancedReasoning').checked;
+    
+    const response = await fetch('/api/v1/query/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            question,
+            use_advanced_reasoning: useAdvancedReasoning
+        })
+    });
+}
+```
+
+#### State Management
+- **Local Storage**: Session preferences, settings
+- **DOM State**: Real-time UI updates
+- **API State**: Backend communication status
+
+#### Error Handling
+```javascript
+function showStatus(message, type = 'success') {
+    const statusDiv = document.createElement('div');
+    statusDiv.className = `status ${type}`;
+    statusDiv.textContent = message;
+    
+    document.body.appendChild(statusDiv);
+    setTimeout(() => statusDiv.remove(), 5000);
+}
+```
+
+## AGUIApp Guidelines
+
+### Component Structure
+```python
+# Backend integration
+class BackendRAGAgent(Agent):
+    def __init__(self, backend_url: str, **kwargs):
+        self.backend_url = backend_url
+        super().__init__(**kwargs)
+    
+    def run(self, query: str, **kwargs) -> Any:
+        # Forward to backend API
+        response = requests.post(f"{self.backend_url}/api/v1/query/", ...)
+        return formatted_response
+```
+
+### UI Configuration
+```python
+agui_app = AGUIApp(
+    agent=chat_agent,
+    name="Enterprise RAG System",
+    app_id="enterprise_rag_system",
+    description="Advanced RAG system with multi-LLM support",
+    show_session_id=True,
+    show_reasoning=True,
+)
+```
+
+### Custom Endpoints
+```python
+@app.post("/upload-document/")
+async def upload_document_endpoint(file: bytes, filename: str, content_type: str):
+    # Custom file upload handling
+    api_url = f"{config.BACKEND_URL}/api/v1/upload-document/"
+    response = await loop.run_in_executor(None, upload_to_backend)
+    return response.json()
+```
+
+## CLI Interface Guidelines
+
+### Command Structure
+```python
+class RAGCLI:
+    def __init__(self):
+        self.knowledge_base = get_knowledge_base()
+        self.rag_agent = get_rag_agent()
+        self.reasoning_agent = get_reasoning_agent()
+        self.research_team = get_research_team()
+```
+
+### Available Commands
+- `/help` - Show command help
+- `/info` - Knowledge base information
+- `/url <url>` - Add URL content
+- `/reasoning` - Toggle advanced reasoning
+- `/session` - Show session info
+- `/cleanup` - Clean temporary files
+- `/quit` - Exit CLI
+
+### Interactive Features
+```python
+async def process_query(self, question: str, use_reasoning: bool = False):
+    agent = self.research_team if use_reasoning else self.rag_agent
+    agent.session_id = self.current_session_id
+    
+    response = agent.run(question)
+    
+    # Display formatted response with sources and reasoning
+    print(f"\n{'=' * 60}")
+    print("📝 Response:")
+    print(response.content)
+```
+
+## Accessibility Guidelines
+
+### Web Dashboard Accessibility
+- **Keyboard Navigation**: Tab order, focus indicators
+- **Screen Readers**: ARIA labels, semantic HTML
+- **Color Contrast**: WCAG 2.1 AA compliance
+- **Font Sizing**: Scalable text, minimum 16px base
+
+### ARIA Implementation
+```html
+<button aria-label="Upload documents" onclick="uploadFiles()">
+    Upload Documents
+</button>
+
+<div role="status" aria-live="polite" id="uploadStatus">
+    <!-- Dynamic status updates -->
+</div>
+```
+
+### Keyboard Shortcuts
+- **Enter**: Submit query/form
+- **Ctrl+U**: Focus file upload
+- **Ctrl+L**: Focus URL input
+- **Esc**: Clear/cancel operations
+
+## Performance Guidelines
+
+### Web Dashboard Optimization
+- **Lazy Loading**: Load components on demand
+- **Debounced Input**: Prevent excessive API calls
+- **Caching**: Local storage for frequently used data
+- **Minification**: Compressed CSS/JS (production)
+
+### JavaScript Performance
+```javascript
+// Debounced search
+const debouncedSearch = debounce((query) => {
+    searchKnowledgeBase(query);
+}, 300);
+
+// Efficient DOM updates
+function updateResponseArea(content) {
+    const responseArea = document.getElementById('responseArea');
+    responseArea.textContent = content;
+}
+```
+
+### AGUIApp Performance
+- **Async Operations**: Non-blocking backend calls
+- **Connection Pooling**: Reuse HTTP connections
+- **Error Recovery**: Graceful degradation
+
+## Security Guidelines
+
+### Input Validation
+```javascript
+function validateFileUpload(file) {
+    const allowedTypes = ['.pdf', '.docx', '.txt', '.md'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    
+    if (!allowedTypes.some(type => file.name.endsWith(type))) {
+        throw new Error('Invalid file type');
+    }
+    
+    if (file.size > maxSize) {
+        throw new Error('File too large');
+    }
+}
+```
+
+### XSS Prevention
+- **Content Sanitization**: Escape user input
+- **CSP Headers**: Content Security Policy
+- **Safe DOM Updates**: Use textContent over innerHTML
+
+### CSRF Protection
+- **Same-Origin Policy**: Restrict cross-origin requests
+- **CSRF Tokens**: For state-changing operations (future)
+
+## Testing Guidelines
+
+### Web Dashboard Testing
+```javascript
+// Unit tests for JavaScript functions
+describe('File Upload', () => {
+    test('validates file types correctly', () => {
+        const validFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+        expect(() => validateFileUpload(validFile)).not.toThrow();
+    });
+});
+```
+
+### AGUIApp Testing
+```python
+def test_backend_integration():
+    agent = BackendRAGAgent(backend_url="http://localhost:8000")
+    response = agent.run("test query")
+    assert response.content is not None
+```
+
+### CLI Testing
+```python
+def test_cli_commands():
+    cli = RAGCLI()
+    result = cli.show_info()
+    assert "Knowledge Base Information" in result
+```
+
+## Browser Compatibility
+
+### Supported Browsers
+- **Chrome**: 90+
+- **Firefox**: 88+
+- **Safari**: 14+
+- **Edge**: 90+
+
+### Progressive Enhancement
+- **Base Functionality**: Works without JavaScript
+- **Enhanced Experience**: JavaScript-powered features
+- **Fallback Options**: Graceful degradation
+
+### Feature Detection
+```javascript
+if ('fetch' in window) {
+    // Use modern fetch API
+} else {
+    // Fallback to XMLHttpRequest
+}
+```
+
+## Mobile Responsiveness
+
+### Breakpoints
+- **Mobile**: 320px - 768px
+- **Tablet**: 768px - 1024px
+- **Desktop**: 1024px+
+
+### Mobile-First CSS
+```css
+/* Mobile first */
+.container {
+    padding: 10px;
+}
+
+/* Tablet and up */
+@media (min-width: 768px) {
+    .container {
+        padding: 20px;
+    }
+}
+
+/* Desktop and up */
+@media (min-width: 1024px) {
+    .container {
+        padding: 30px;
+    }
+}
+```
+
+### Touch Interactions
+- **Touch Targets**: Minimum 44px touch area
+- **Gesture Support**: Swipe, pinch, zoom
+- **Hover Alternatives**: Touch-friendly interactions

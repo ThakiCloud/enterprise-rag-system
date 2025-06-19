@@ -1,0 +1,399 @@
+---
+title: "User Flow"
+description: "TODO: add description for User Flow"
+alwaysApply: false
+---
+# User Flow Documentation
+
+## Overview
+
+The Enterprise RAG System provides three distinct user interfaces, each optimized for different user types and use cases:
+
+1. **Web Dashboard** - General users and business professionals
+2. **AGUIApp UI** - Python developers and technical users  
+3. **CLI Interface** - System administrators and developers
+
+## Web Dashboard User Flow (Port 8000)
+
+### Primary User Journey: Document Upload & Query
+
+```mermaid
+flowchart TD
+    A[User visits http://localhost:8000] --> B[Web Dashboard Loads]
+    B --> C{First Time User?}
+    C -->|Yes| D[View Welcome Tutorial]
+    C -->|No| E[Main Dashboard]
+    D --> E
+    E --> F{User Action}
+    F -->|Upload Files| G[File Upload Flow]
+    F -->|Add URL| H[URL Processing Flow]
+    F -->|Ask Question| I[Query Processing Flow]
+    F -->|View History| J[Session Management Flow]
+```
+
+### 1. Initial Access & Onboarding
+**User Goal**: Access the system and understand capabilities
+
+**Steps**:
+1. **Landing Page**: User navigates to `http://localhost:8000/`
+2. **Interface Overview**: Clean, modern interface with clear sections
+3. **Quick Start Guide**: Inline tooltips and help text
+4. **System Status**: Knowledge base statistics displayed
+
+**Success Criteria**: User understands interface within 2 minutes
+
+### 2. Document Upload Flow
+**User Goal**: Add documents to knowledge base
+
+**Steps**:
+1. **File Selection**: 
+   - Click "Choose Files" or drag-and-drop files
+   - Multiple file selection supported
+   - Real-time file validation feedback
+2. **Upload Process**:
+   - Progress bar for each file
+   - File type and size validation
+   - Error handling for invalid files
+3. **Processing Feedback**:
+   - Success/error notifications
+   - Processing status updates
+   - Document count updates
+
+**Supported Formats**: PDF, DOCX, TXT, MD
+**File Limits**: 10MB per file, multiple files supported
+**Error Handling**: Clear error messages with corrective actions
+
+### 3. URL Content Processing Flow
+**User Goal**: Add web content to knowledge base
+
+**Steps**:
+1. **URL Input**: 
+   - Enter URL in dedicated input field
+   - URL format validation
+   - Protocol verification (HTTP/HTTPS only)
+2. **Content Extraction**:
+   - Background processing notification
+   - Content preview (if available)
+   - Success/failure feedback
+3. **Integration**:
+   - Content added to knowledge base
+   - Source tracking and attribution
+   - Knowledge base statistics update
+
+**Validation**: URL format, protocol, accessibility
+**Error Handling**: Network errors, invalid URLs, access denied
+
+### 4. Query Processing Flow
+**User Goal**: Ask questions and get AI-powered answers
+
+**Steps**:
+1. **Question Input**:
+   - Large text area for question entry
+   - Character count indicator
+   - Advanced reasoning toggle option
+2. **Processing**:
+   - Real-time processing indicator
+   - Streaming response display
+   - Source attribution shown
+3. **Response Display**:
+   - Formatted answer with sources
+   - Reasoning steps (if advanced mode)
+   - Follow-up question suggestions
+
+**Features**: 
+- Real-time streaming responses
+- Source attribution with links
+- Advanced reasoning mode
+- Session-based context preservation
+
+### 5. Session Management Flow
+**User Goal**: Manage conversation history and context
+
+**Steps**:
+1. **Session View**:
+   - Current session information
+   - Conversation history display
+   - Session statistics
+2. **Session Actions**:
+   - Create new session
+   - Switch between sessions
+   - Delete old sessions
+3. **Context Management**:
+   - Automatic context preservation
+   - Manual context clearing
+   - Session-based history
+
+**Persistence**: SQLite-based session storage
+**Limits**: 10 messages per session (configurable)
+
+## AGUIApp UI User Flow (Port 8501)
+
+### Primary User Journey: Developer-Focused RAG Interaction
+
+```mermaid
+flowchart TD
+    A[Developer accesses http://localhost:8501] --> B[AGUIApp Interface]
+    B --> C[Backend Connection Check]
+    C -->|Connected| D[Chat Interface Ready]
+    C -->|Failed| E[Connection Error Display]
+    E --> F[Retry Connection]
+    F --> C
+    D --> G{User Action}
+    G -->|Send Query| H[Process Query via Backend]
+    G -->|Upload Document| I[File Upload via API]
+    G -->|View Session| J[Session Management]
+```
+
+### 1. Developer Onboarding
+**User Goal**: Quick access to RAG capabilities for development/testing
+
+**Steps**:
+1. **Interface Launch**: AGUIApp loads with backend connection
+2. **Connection Verification**: Automatic backend API connectivity check
+3. **Ready State**: Chat interface becomes available
+4. **Configuration Display**: Current LLM provider and settings shown
+
+**Technical Features**:
+- Backend API integration (`http://localhost:8000`)
+- Real-time connection status
+- Error recovery mechanisms
+
+### 2. Chat-Based Interaction
+**User Goal**: Interactive conversation with RAG system
+
+**Steps**:
+1. **Query Input**: Natural language question input
+2. **Backend Processing**: Request forwarded to FastAPI backend
+3. **Response Streaming**: Real-time response display
+4. **Session Tracking**: Automatic session management
+
+**Developer Features**:
+- Direct API integration
+- Session ID visibility
+- Backend error propagation
+- Response time tracking
+
+### 3. Document Management
+**User Goal**: Programmatic document handling
+
+**Steps**:
+1. **File Upload**: Direct file upload through AGUIApp
+2. **API Integration**: Files processed via backend API
+3. **Status Feedback**: Processing status and results
+4. **Error Handling**: Detailed error information for debugging
+
+**Technical Benefits**:
+- Seamless backend integration
+- Developer-friendly error messages
+- API response inspection
+
+## CLI Interface User Flow
+
+### Primary User Journey: System Administration & Development
+
+```mermaid
+flowchart TD
+    A[Run: python run_backend.py --cli] --> B[CLI Initialization]
+    B --> C[System Checks]
+    C -->|Pass| D[CLI Ready]
+    C -->|Fail| E[Error Report & Exit]
+    D --> F[Command Prompt]
+    F --> G{User Command}
+    G -->|/help| H[Show Help]
+    G -->|/info| I[System Information]
+    G -->|/url| J[Add URL Content]
+    G -->|/reasoning| K[Toggle Reasoning Mode]
+    G -->|/session| L[Session Info]
+    G -->|/cleanup| M[File Cleanup]
+    G -->|/quit| N[Exit CLI]
+    G -->|Question| O[Process Query]
+```
+
+### 1. CLI Initialization
+**User Goal**: Access command-line interface for system management
+
+**Steps**:
+1. **Launch Command**: `python run_backend.py --cli`
+2. **System Validation**: Environment and dependency checks
+3. **Agent Initialization**: RAG and reasoning agents setup
+4. **Ready Prompt**: Interactive command prompt appears
+
+**Prerequisites**: Backend dependencies installed, environment configured
+
+### 2. System Management Commands
+
+#### `/help` - Command Help
+**Purpose**: Display available commands and usage
+**Output**: Formatted help text with command descriptions
+
+#### `/info` - System Information  
+**Purpose**: Display knowledge base and system status
+**Output**: 
+- Document count in knowledge base
+- Vector database status
+- Current LLM provider
+- Session information
+
+#### `/url <URL>` - Add URL Content
+**Purpose**: Add web content to knowledge base
+**Process**:
+1. URL validation and processing
+2. Content extraction and vectorization
+3. Success/failure feedback
+4. Knowledge base update confirmation
+
+#### `/reasoning` - Toggle Advanced Reasoning
+**Purpose**: Switch between RAG and Research Team modes
+**States**:
+- **RAG Mode**: Direct document retrieval and response
+- **Research Team Mode**: Multi-agent reasoning with CoT
+
+#### `/session` - Session Information
+**Purpose**: Display current session details
+**Output**:
+- Session ID
+- Message count
+- Session creation time
+- Context information
+
+#### `/cleanup` - File Cleanup
+**Purpose**: Clean temporary files and optimize storage
+**Process**:
+1. Identify temporary files
+2. Safe cleanup execution
+3. Storage optimization
+4. Cleanup summary report
+
+### 3. Interactive Query Processing
+**User Goal**: Ask questions and receive detailed responses
+
+**Steps**:
+1. **Question Input**: Type question at prompt
+2. **Mode Selection**: Automatic mode based on reasoning toggle
+3. **Processing**: Real-time processing with status updates
+4. **Response Display**: 
+   - Formatted answer
+   - Source attribution
+   - Reasoning steps (if enabled)
+   - Processing time
+
+**Advanced Features**:
+- Session context preservation
+- Detailed reasoning traces
+- Source document references
+- Performance metrics
+
+## Cross-Interface User Flows
+
+### Multi-Interface Usage Patterns
+
+#### 1. Developer Workflow
+```
+CLI (System Setup) → Web Dashboard (Content Upload) → AGUIApp (Development/Testing)
+```
+
+**Scenario**: Developer sets up system, uploads documents via web interface, tests queries via AGUIApp
+
+#### 2. Business User Workflow  
+```
+Web Dashboard (Complete Workflow) 
+```
+
+**Scenario**: Business user performs all tasks through web interface
+
+#### 3. Admin Workflow
+```
+CLI (System Management) → Web Dashboard (Monitoring) → CLI (Maintenance)
+```
+
+**Scenario**: Administrator manages system via CLI, monitors via web dashboard
+
+### Session Continuity
+
+**Cross-Interface Session Sharing**:
+- Sessions created in any interface are accessible in others
+- Session IDs can be shared between interfaces
+- Conversation history preserved across interfaces
+
+**Implementation**:
+- SQLite-based session storage
+- REST API for session management
+- Consistent session format across interfaces
+
+## Error Handling & Recovery
+
+### Common Error Scenarios
+
+#### 1. File Upload Errors
+**Web Dashboard & AGUIApp**:
+- File too large (>10MB)
+- Unsupported file type
+- Network connectivity issues
+- Server processing errors
+
+**Recovery Actions**:
+- Clear error messages with corrective actions
+- Retry mechanisms for network issues
+- File validation before upload
+- Progress indicators with cancel options
+
+#### 2. Query Processing Errors
+**All Interfaces**:
+- LLM provider API errors
+- Network connectivity issues
+- Context window exceeded
+- Rate limiting
+
+**Recovery Actions**:
+- Automatic retry with exponential backoff
+- Fallback to alternative LLM providers
+- Context optimization
+- User-friendly error messages
+
+#### 3. System Errors
+**CLI & Backend**:
+- Missing dependencies
+- Configuration errors
+- Database connectivity issues
+- Resource exhaustion
+
+**Recovery Actions**:
+- Pre-flight system checks
+- Graceful degradation
+- Detailed error logging
+- Recovery suggestions
+
+## Performance Optimization
+
+### Response Time Targets
+- **Web Dashboard**: < 2 seconds for query responses
+- **AGUIApp**: < 1 second for UI interactions  
+- **CLI**: < 3 seconds for complex operations
+
+### Optimization Strategies
+- **Caching**: Vector embeddings and frequent queries
+- **Streaming**: Real-time response delivery
+- **Lazy Loading**: Progressive content loading
+- **Connection Pooling**: Efficient API connections
+
+## Accessibility & Usability
+
+### Web Dashboard Accessibility
+- **Keyboard Navigation**: Full keyboard support
+- **Screen Readers**: ARIA labels and semantic HTML
+- **Color Contrast**: WCAG 2.1 AA compliance
+- **Font Scaling**: Responsive text sizing
+
+### CLI Accessibility
+- **Clear Output**: Well-formatted, readable text
+- **Progress Indicators**: Clear operation status
+- **Error Messages**: Actionable error information
+- **Help System**: Comprehensive command help
+
+### AGUIApp Usability
+- **Intuitive Interface**: Streamlit-like simplicity
+- **Real-time Feedback**: Immediate response to actions
+- **Error Recovery**: Graceful error handling
+- **Developer Tools**: Debug information and logs
+
+This user flow documentation ensures consistent, intuitive experiences across all interfaces while catering to the specific needs of different user types.
