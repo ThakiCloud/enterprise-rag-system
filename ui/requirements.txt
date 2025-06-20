@@ -7,6 +7,8 @@ httpx
 agno
 ag-ui-protocol
 tantivy
+PyPDF2 
+pypdf
 # AGUIApp and related dependencies
 # Note: Replace with actual agno package when available
 # agno

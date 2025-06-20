@@ -1,10 +1,21 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Body
+from fastapi.responses import StreamingResponse
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, AsyncGenerator
 import logging
 import requests
 from bs4 import BeautifulSoup
 import re
+import json
+import asyncio
+import io
+import os
+from pathlib import Path
+
+# Document processing imports
+from docx import Document
+import PyPDF2
+import pypdf
 
 from ..schemas.query import QueryRequest, QueryResponse
 from ..schemas.document import DocumentUploadResponse
@@ -16,6 +27,117 @@ router = APIRouter()
 # Set up logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+def extract_text_from_pdf(file_content: bytes) -> str:
+    """Extract text from PDF file"""
+    try:
+        # Try with pypdf first (newer library)
+        pdf_file = io.BytesIO(file_content)
+        pdf_reader = pypdf.PdfReader(pdf_file)
+        
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        
+        if text.strip():
+            return text
+    except Exception as e:
+        logger.warning(f"pypdf failed, trying PyPDF2: {e}")
+    
+    try:
+        # Fallback to PyPDF2
+        pdf_file = io.BytesIO(file_content)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        
+        return text
+    except Exception as e:
+        logger.error(f"Both PDF readers failed: {e}")
+        raise ValueError(f"PDF 파일을 읽을 수 없습니다: {str(e)}")
+
+def extract_text_from_docx(file_content: bytes) -> str:
+    """Extract text from DOCX file"""
+    try:
+        docx_file = io.BytesIO(file_content)
+        doc = Document(docx_file)
+        
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        
+        # Extract text from tables
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    text += cell.text + "\t"
+                text += "\n"
+        
+        return text
+    except Exception as e:
+        logger.error(f"DOCX processing failed: {e}")
+        raise ValueError(f"DOCX 파일을 읽을 수 없습니다: {str(e)}")
+
+def extract_text_from_txt_or_md(file_content: bytes) -> str:
+    """Extract text from TXT or MD file"""
+    try:
+        # Try different encodings
+        encodings = ['utf-8', 'utf-8-sig', 'cp949', 'euc-kr', 'latin-1']
+        
+        for encoding in encodings:
+            try:
+                return file_content.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+        
+        # If all encodings fail, use utf-8 with error handling
+        return file_content.decode('utf-8', errors='ignore')
+    except Exception as e:
+        logger.error(f"Text file processing failed: {e}")
+        raise ValueError(f"텍스트 파일을 읽을 수 없습니다: {str(e)}")
+
+def process_document(file_content: bytes, filename: str, file_extension: str) -> Dict[str, Any]:
+    """Process document and extract text content"""
+    try:
+        if file_extension.lower() == '.pdf':
+            text = extract_text_from_pdf(file_content)
+        elif file_extension.lower() == '.docx':
+            text = extract_text_from_docx(file_content)
+        elif file_extension.lower() in ['.txt', '.md']:
+            text = extract_text_from_txt_or_md(file_content)
+        else:
+            raise ValueError(f"지원하지 않는 파일 형식입니다: {file_extension}")
+        
+        # Clean and validate text
+        text = text.strip()
+        if not text:
+            raise ValueError("파일에서 텍스트를 추출할 수 없습니다. 파일이 비어있거나 손상되었을 수 있습니다.")
+        
+        # Calculate basic statistics
+        word_count = len(text.split())
+        char_count = len(text)
+        line_count = len(text.splitlines())
+        
+        return {
+            'text': text,
+            'word_count': word_count,
+            'char_count': char_count,
+            'line_count': line_count,
+            'filename': filename,
+            'file_type': file_extension,
+            'status': 'success'
+        }
+        
+    except Exception as e:
+        logger.error(f"Document processing failed for {filename}: {e}")
+        return {
+            'filename': filename,
+            'file_type': file_extension,
+            'error': str(e),
+            'status': 'error'
+        }
 
 def extract_web_content(url: str) -> Dict[str, Any]:
     """Extract content from a web URL"""
@@ -126,6 +248,122 @@ async def query_knowledge(
         raise HTTPException(status_code=500, detail=f"Error processing query: {str(e)}")
 
 
+@router.post("/query/stream/")
+async def query_knowledge_stream(
+    request: QueryRequest
+):
+    """Process a query using the RAG system with streaming response."""
+    try:
+        logger.info(f"Received streaming query request for session: {request.session_id}")
+        session_id = request.session_id or f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        logger.info(f"Getting agent for streaming query (advanced_reasoning={request.use_advanced_reasoning})...")
+        rag_agent = get_rag_agent()
+        research_team = get_research_team()
+        agent = research_team if request.use_advanced_reasoning else rag_agent
+        logger.info(f"Using agent: {agent.name if hasattr(agent, 'name') else 'SimpleAgent'}")
+        
+        async def generate_response():
+            try:
+                logger.info(f"Executing agent with question: '{request.question}'")
+                response = await agent.arun(request.question)
+                logger.info("Agent execution finished, starting streaming response.")
+                
+                # Parse response to handle <think> tags
+                think_content = ""
+                main_response = response
+                
+                # Extract <think> content if present
+                if "<think>" in response and "</think>" in response:
+                    think_start = response.find("<think>")
+                    think_end = response.find("</think>") + 8
+                    think_content = response[think_start:think_end]
+                    main_response = response[think_end:].strip()
+                
+                # Create response data
+                response_data = {
+                    "query": request.question,
+                    "session_id": session_id,
+                    "timestamp": datetime.now().isoformat(),
+                    "status": "streaming"
+                }
+                
+                # Send initial response metadata
+                yield f"data: {json.dumps(response_data)}\n\n"
+                
+                # Stream the response word by word
+                words = main_response.split()
+                total_words = len(words)
+                
+                for i, word in enumerate(words):
+                    # Add thinking section for first word if present
+                    if i == 0 and think_content:
+                        word_data = {
+                            "word": word,
+                            "index": i,
+                            "total": total_words,
+                            "progress": round((i + 1) / total_words * 100, 1),
+                            "think": think_content,
+                            "is_complete": False
+                        }
+                    else:
+                        word_data = {
+                            "word": word,
+                            "index": i,
+                            "total": total_words,
+                            "progress": round((i + 1) / total_words * 100, 1),
+                            "is_complete": False
+                        }
+                    
+                    yield f"data: {json.dumps(word_data)}\n\n"
+                    
+                    # Add delay for streaming effect
+                    if word.endswith(('.', '!', '?', ':')):
+                        await asyncio.sleep(0.3)  # Longer pause for sentence endings
+                    elif word.endswith(','):
+                        await asyncio.sleep(0.15)  # Medium pause for commas
+                    else:
+                        await asyncio.sleep(0.05)  # Short pause for regular words
+                
+                # Send completion signal
+                completion_data = {
+                    "is_complete": True,
+                    "total_words": total_words,
+                    "full_response": main_response,
+                    "think_content": think_content if think_content else None,
+                    "session_id": session_id,
+                    "timestamp": datetime.now().isoformat(),
+                    "status": "completed"
+                }
+                yield f"data: {json.dumps(completion_data)}\n\n"
+                
+            except Exception as e:
+                logger.error(f"Error in streaming response: {str(e)}", exc_info=True)
+                error_data = {
+                    "error": str(e),
+                    "is_complete": True,
+                    "status": "error"
+                }
+                yield f"data: {json.dumps(error_data)}\n\n"
+        
+        return StreamingResponse(
+            generate_response(),
+            media_type="text/plain",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Content-Type": "text/event-stream",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type"
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error setting up streaming query: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error setting up streaming query: {str(e)}")
+
+
 @router.post("/upload-document/", response_model=DocumentUploadResponse)
 async def upload_document(
     file: UploadFile = File(...)
@@ -148,21 +386,44 @@ async def upload_document(
         if len(file_content) > max_size:
             raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
         
-        # Simple file processing - just add as text to knowledge base
-        content = file_content.decode('utf-8', errors='ignore')
+        # Process document
+        document_data = process_document(file_content, file.filename, file_extension)
+        
+        if document_data['status'] == 'error':
+            raise HTTPException(status_code=400, detail=document_data['error'])
+        
+        # Add to knowledge base
         knowledge_base = get_knowledge_base()
-        knowledge_base.add_document(content, {"filename": file.filename, "type": file_extension})
+        metadata = {
+            "filename": file.filename,
+            "type": file_extension,
+            "word_count": document_data['word_count'],
+            "char_count": document_data['char_count'],
+            "line_count": document_data['line_count'],
+            "extracted_at": datetime.now().isoformat()
+        }
+        
+        knowledge_base.add_document(document_data['text'], metadata)
+        
+        logger.info(f"Successfully processed and added document: {file.filename}")
         
         return DocumentUploadResponse(
-            message=f"Document {file.filename} uploaded successfully",
-            document_id=f"doc_{len(knowledge_base.documents)}",
+            message=f"문서 '{file.filename}'이 성공적으로 업로드되고 분석되었습니다.",
+            document_id=f"doc_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(knowledge_base.documents)}",
             filename=file.filename,
-            status="success"
+            status="success",
+            metadata={
+                "word_count": document_data['word_count'],
+                "char_count": document_data['char_count'],
+                "line_count": document_data['line_count'],
+                "file_type": file_extension
+            }
         )
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
+        logger.error(f"Error processing document {file.filename}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"문서 처리 중 오류가 발생했습니다: {str(e)}")
 
 
 @router.post("/add-url/")
@@ -334,4 +595,153 @@ async def get_knowledge_base_stats():
         
         return stats
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting knowledge base stats: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Error getting knowledge base stats: {str(e)}")
+
+
+@router.post("/analyze-document/")
+async def analyze_document(
+    file: UploadFile = File(...),
+    question: str = Body(default="이 문서의 내용을 분석하고 주요 내용을 요약해주세요.", embed=True)
+):
+    """Upload and immediately analyze a document."""
+    try:
+        logger.info(f"Analyzing document: {file.filename}")
+        
+        # First upload the document
+        upload_result = await upload_document(file)
+        
+        if upload_result.status != "success":
+            raise HTTPException(status_code=400, detail="문서 업로드에 실패했습니다.")
+        
+        # Now analyze the document
+        rag_agent = get_rag_agent()
+        
+        # Create analysis question that references the document
+        analysis_question = f"방금 업로드된 문서 '{upload_result.filename}'에 대해: {question}"
+        
+        logger.info(f"Analyzing document with question: {analysis_question}")
+        response = await rag_agent.arun(analysis_question)
+        
+        return {
+            "filename": upload_result.filename,
+            "document_id": upload_result.document_id,
+            "metadata": upload_result.metadata,
+            "question": question,
+            "analysis": response,
+            "status": "success",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error analyzing document {file.filename}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"문서 분석 중 오류가 발생했습니다: {str(e)}")
+
+
+@router.post("/upload-multiple-documents/")
+async def upload_multiple_documents(
+    files: List[UploadFile] = File(...)
+):
+    """Upload multiple documents at once."""
+    try:
+        if len(files) > 10:
+            raise HTTPException(status_code=400, detail="한 번에 최대 10개의 파일만 업로드할 수 있습니다.")
+        
+        results = []
+        success_count = 0
+        error_count = 0
+        
+        for file in files:
+            try:
+                # Process each file
+                file_content = await file.read()
+                
+                # Reset file position for reuse
+                await file.seek(0)
+                
+                # Validate file
+                allowed_extensions = ['.pdf', '.docx', '.txt', '.md']
+                file_extension = '.' + file.filename.lower().split('.')[-1] if '.' in file.filename else ''
+                
+                if file_extension not in allowed_extensions:
+                    results.append({
+                        "filename": file.filename,
+                        "status": "error",
+                        "error": f"지원하지 않는 파일 형식: {file_extension}"
+                    })
+                    error_count += 1
+                    continue
+                
+                # Check file size
+                max_size = 10 * 1024 * 1024  # 10MB
+                if len(file_content) > max_size:
+                    results.append({
+                        "filename": file.filename,
+                        "status": "error",
+                        "error": "파일 크기가 10MB를 초과합니다."
+                    })
+                    error_count += 1
+                    continue
+                
+                # Process document
+                document_data = process_document(file_content, file.filename, file_extension)
+                
+                if document_data['status'] == 'error':
+                    results.append({
+                        "filename": file.filename,
+                        "status": "error",
+                        "error": document_data['error']
+                    })
+                    error_count += 1
+                    continue
+                
+                # Add to knowledge base
+                knowledge_base = get_knowledge_base()
+                metadata = {
+                    "filename": file.filename,
+                    "type": file_extension,
+                    "word_count": document_data['word_count'],
+                    "char_count": document_data['char_count'],
+                    "line_count": document_data['line_count'],
+                    "extracted_at": datetime.now().isoformat()
+                }
+                
+                knowledge_base.add_document(document_data['text'], metadata)
+                
+                results.append({
+                    "filename": file.filename,
+                    "status": "success",
+                    "document_id": f"doc_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(knowledge_base.documents)}",
+                    "metadata": {
+                        "word_count": document_data['word_count'],
+                        "char_count": document_data['char_count'],
+                        "line_count": document_data['line_count'],
+                        "file_type": file_extension
+                    }
+                })
+                success_count += 1
+                
+            except Exception as e:
+                results.append({
+                    "filename": file.filename,
+                    "status": "error",
+                    "error": str(e)
+                })
+                error_count += 1
+        
+        return {
+            "message": f"총 {len(files)}개 파일 처리 완료: {success_count}개 성공, {error_count}개 실패",
+            "total_files": len(files),
+            "success_count": success_count,
+            "error_count": error_count,
+            "results": results,
+            "status": "completed",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing multiple documents: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"다중 문서 업로드 중 오류가 발생했습니다: {str(e)}") 

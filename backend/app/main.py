@@ -272,6 +272,168 @@ async def get_dashboard():
             .status.loading { background: #d1ecf1; color: #0c5460; }
             .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
             .checkbox-group input[type="checkbox"] { transform: scale(1.2); }
+            
+            /* Upload area styles */
+            .upload-container {
+                margin: 20px 0;
+            }
+            
+            .upload-area {
+                border: 3px dashed #007bff;
+                border-radius: 10px;
+                padding: 40px 20px;
+                text-align: center;
+                background: #f8f9fa;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin-bottom: 20px;
+            }
+            
+            .upload-area:hover {
+                border-color: #0056b3;
+                background: #e3f2fd;
+            }
+            
+            .upload-area.drag-over {
+                border-color: #28a745;
+                background: #d4edda;
+                transform: scale(1.02);
+            }
+            
+            .upload-icon {
+                font-size: 48px;
+                margin-bottom: 15px;
+            }
+            
+            .upload-text p {
+                margin: 5px 0;
+                color: #333;
+            }
+            
+            .upload-text p:first-child {
+                font-size: 18px;
+                color: #007bff;
+            }
+            
+            .upload-text p:last-child {
+                font-size: 14px;
+                color: #666;
+            }
+            
+            /* File list styles */
+            .file-list {
+                background: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .file-list h4 {
+                margin: 0 0 10px 0;
+                color: #333;
+                font-size: 16px;
+            }
+            
+            .file-list ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .file-item {
+                padding: 8px 12px;
+                margin: 5px 0;
+                border-radius: 5px;
+                font-size: 14px;
+            }
+            
+            .file-valid {
+                background: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+            
+            .file-invalid {
+                background: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+            
+            .file-warning {
+                background: #fff3cd;
+                color: #856404;
+                border: 1px solid #ffeaa7;
+            }
+            
+            /* Upload action buttons */
+            .upload-actions {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .action-btn {
+                padding: 12px 24px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                min-width: 140px;
+            }
+            
+            .upload-btn {
+                background: #007bff;
+                color: white;
+            }
+            
+            .upload-btn:hover {
+                background: #0056b3;
+                transform: translateY(-2px);
+            }
+            
+            .analyze-btn {
+                background: #28a745;
+                color: white;
+            }
+            
+            .analyze-btn:hover {
+                background: #1e7e34;
+                transform: translateY(-2px);
+            }
+            
+            .clear-btn {
+                background: #6c757d;
+                color: white;
+            }
+            
+            .clear-btn:hover {
+                background: #545b62;
+                transform: translateY(-2px);
+            }
+            
+            @media (max-width: 768px) {
+                .upload-actions {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                
+                .action-btn {
+                    width: 100%;
+                    margin-bottom: 10px;
+                }
+                
+                .upload-area {
+                    padding: 30px 15px;
+                }
+                
+                .upload-icon {
+                    font-size: 36px;
+                }
+            }
         </style>
     </head>
     <body>
@@ -286,9 +448,35 @@ async def get_dashboard():
                     <div class="feature-box">
                         <h3>📄 Document Upload</h3>
                         <p>Upload PDF, DOCX, or text files to expand the knowledge base.</p>
-                        <div class="form-group">
-                            <input type="file" id="fileInput" class="form-control" multiple accept=".pdf,.docx,.txt">
-                            <button id="uploadBtn" class="btn" style="margin-top: 10px; width: 100%;">Upload Documents</button>
+                        <div class="section">
+                            <h2>📄 문서 업로드</h2>
+                            <div class="upload-container">
+                                <div class="upload-area" id="uploadArea">
+                                    <div class="upload-icon">📁</div>
+                                    <div class="upload-text">
+                                        <p><strong>파일을 드래그하여 놓거나 클릭하여 선택하세요</strong></p>
+                                        <p>지원 형식: PDF, DOCX, TXT, MD (최대 10MB)</p>
+                                    </div>
+                                    <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.md" style="display: none;">
+                                </div>
+                                
+                                <div class="file-list" id="fileList" style="display: none;">
+                                    <h4>선택된 파일:</h4>
+                                    <ul id="selectedFiles"></ul>
+                                </div>
+                                
+                                <div class="upload-actions">
+                                    <button onclick="uploadFiles()" class="action-btn upload-btn">
+                                        📤 업로드하기
+                                    </button>
+                                    <button onclick="analyzeDocument()" class="action-btn analyze-btn">
+                                        🔍 바로 분석하기
+                                    </button>
+                                    <button onclick="clearFiles()" class="action-btn clear-btn">
+                                        🗑️ 선택 해제
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -321,28 +509,30 @@ async def get_dashboard():
                 </div>
                 
                 <div class="content">
-                    <div class="form-group">
-                        <label for="questionInput">Ask your question:</label>
-                        <textarea id="questionInput" class="form-control" rows="3" 
-                                placeholder="Enter your question about the uploaded documents..."></textarea>
-                        <div class="checkbox-group">
-                            <button id="submitBtn" class="btn" style="margin-top: 15px;">Submit Query</button>
-                            <button id="clearBtn" class="btn btn-secondary" style="margin-top: 15px; margin-left: 10px;">New Session</button>
+                    <form id="queryForm">
+                        <div class="form-group">
+                            <label for="queryInput">질문을 입력하세요:</label>
+                            <textarea id="queryInput" class="form-control" rows="3" 
+                                    placeholder="업로드된 문서에 대해 질문하거나 일반적인 질문을 하세요..."></textarea>
+                            <div class="checkbox-group">
+                                <button type="submit" id="submitBtn" class="btn" style="margin-top: 15px;">Submit Query</button>
+                                <button type="button" id="clearBtn" class="btn btn-secondary" style="margin-top: 15px; margin-left: 10px;">New Session</button>
+                            </div>
                         </div>
-                    </div>
+                    </form>
                     
                     <div id="responseArea" class="response-area">
-                        Welcome to the Enterprise RAG System! 🚀
+                        Enterprise RAG System에 오신 것을 환영합니다! 🚀
                         
-                        Features:
-                        • Upload and analyze documents (PDF, DOCX, TXT)
-                        • Add web content via URLs
-                        • Advanced reasoning and chain-of-thought analysis
-                        • Session memory for continuous conversations
-                        • Professional document analysis
-                        • Multi-LLM provider support
+                        주요 기능:
+                        • 문서 업로드 및 분석 (PDF, DOCX, TXT, MD)
+                        • 웹 콘텐츠 URL 추가 및 분석
+                        • 고급 추론 및 사고 과정 분석
+                        • 세션 메모리로 지속적인 대화
+                        • 전문적인 문서 분석
+                        • 다중 언어 모델 지원
                         
-                        Start by uploading documents or asking a question!
+                        문서를 업로드하거나 질문을 시작해보세요!
                     </div>
                     
                     <div id="statusArea"></div>
@@ -383,15 +573,245 @@ async def get_dashboard():
                 const files = fileInput.files;
                 
                 if (files.length === 0) {
-                    showStatus('Please select files to upload', 'error');
+                    showStatus('업로드할 파일을 선택해주세요', 'error');
                     return;
                 }
                 
-                showStatus('Uploading ' + files.length + ' file(s)...', 'loading');
-                // Simplified upload logic for now
-                setTimeout(function() {
-                    showStatus('Upload feature coming soon!', 'success');
-                }, 1000);
+                // Validate file types
+                const allowedTypes = ['.pdf', '.docx', '.txt', '.md'];
+                const invalidFiles = [];
+                
+                for (let file of files) {
+                    const extension = '.' + file.name.split('.').pop().toLowerCase();
+                    if (!allowedTypes.includes(extension)) {
+                        invalidFiles.push(file.name);
+                    }
+                }
+                
+                if (invalidFiles.length > 0) {
+                    showStatus('지원하지 않는 파일 형식: ' + invalidFiles.join(', '), 'error');
+                    return;
+                }
+                
+                // Check file sizes
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                const oversizedFiles = [];
+                
+                for (let file of files) {
+                    if (file.size > maxSize) {
+                        oversizedFiles.push(file.name);
+                    }
+                }
+                
+                if (oversizedFiles.length > 0) {
+                    showStatus('파일 크기가 10MB를 초과: ' + oversizedFiles.join(', '), 'error');
+                    return;
+                }
+                
+                showStatus('파일 업로드 중...', 'loading');
+                debugLog('Uploading ' + files.length + ' file(s)');
+                
+                if (files.length === 1) {
+                    uploadSingleFile(files[0]);
+                } else {
+                    uploadMultipleFiles(files);
+                }
+            }
+            
+            function uploadSingleFile(file) {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                fetch('/api/v1/upload-document/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(function(result) {
+                    debugLog('Single file upload result:', result);
+                    
+                    if (result.status === 'success') {
+                        showStatus('파일 업로드 성공!', 'success');
+                        
+                        // Display upload result
+                        const uploadQuery = '문서 업로드: ' + result.filename;
+                        const uploadResponse = '문서가 성공적으로 업로드되고 분석되었습니다!\\n\\n' +
+                                             '파일명: ' + result.filename + '\\n' +
+                                             '문서 ID: ' + result.document_id + '\\n' +
+                                             '단어 수: ' + result.metadata.word_count + '개\\n' +
+                                             '문자 수: ' + result.metadata.char_count + '개\\n' +
+                                             '줄 수: ' + result.metadata.line_count + '개\\n' +
+                                             '파일 형식: ' + result.metadata.file_type + '\\n\\n' +
+                                             result.message + '\\n\\n' +
+                                             '이제 이 문서에 대해 질문할 수 있습니다!';
+                        
+                        parseAndDisplayResponse(
+                            uploadQuery,
+                            uploadResponse,
+                            'upload_' + Date.now(),
+                            new Date().toISOString(),
+                            false
+                        );
+                        
+                        // Clear file input
+                        document.getElementById('fileInput').value = '';
+                    } else {
+                        showStatus('업로드 실패: ' + (result.message || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(function(error) {
+                    debugLog('File upload error:', error);
+                    showStatus('업로드 오류: ' + error.message, 'error');
+                });
+            }
+            
+            function uploadMultipleFiles(files) {
+                const formData = new FormData();
+                for (let file of files) {
+                    formData.append('files', file);
+                }
+                
+                fetch('/api/v1/upload-multiple-documents/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(function(result) {
+                    debugLog('Multiple files upload result:', result);
+                    
+                    showStatus('다중 파일 업로드 완료!', 'success');
+                    
+                    // Display detailed results
+                    let uploadResponse = '다중 문서 업로드 결과:\\n\\n' +
+                                       result.message + '\\n\\n';
+                    
+                    // Show successful uploads
+                    const successFiles = result.results.filter(r => r.status === 'success');
+                    if (successFiles.length > 0) {
+                        uploadResponse += '✅ 성공한 파일들:\\n';
+                        successFiles.forEach(function(file) {
+                            uploadResponse += '• ' + file.filename + 
+                                           ' (단어: ' + file.metadata.word_count + '개)\\n';
+                        });
+                        uploadResponse += '\\n';
+                    }
+                    
+                    // Show failed uploads
+                    const errorFiles = result.results.filter(r => r.status === 'error');
+                    if (errorFiles.length > 0) {
+                        uploadResponse += '❌ 실패한 파일들:\\n';
+                        errorFiles.forEach(function(file) {
+                            uploadResponse += '• ' + file.filename + ': ' + file.error + '\\n';
+                        });
+                        uploadResponse += '\\n';
+                    }
+                    
+                    uploadResponse += '이제 업로드된 문서들에 대해 질문할 수 있습니다!';
+                    
+                    parseAndDisplayResponse(
+                        '다중 문서 업로드 (' + files.length + '개 파일)',
+                        uploadResponse,
+                        'multi_upload_' + Date.now(),
+                        result.timestamp,
+                        false
+                    );
+                    
+                    // Clear file input
+                    document.getElementById('fileInput').value = '';
+                })
+                .catch(function(error) {
+                    debugLog('Multiple files upload error:', error);
+                    showStatus('다중 업로드 오류: ' + error.message, 'error');
+                });
+            }
+            
+            function analyzeDocument() {
+                debugLog('Analyze document button clicked');
+                const fileInput = document.getElementById('fileInput');
+                const files = fileInput.files;
+                
+                if (files.length === 0) {
+                    showStatus('분석할 파일을 선택해주세요', 'error');
+                    return;
+                }
+                
+                if (files.length > 1) {
+                    showStatus('문서 분석은 한 번에 하나의 파일만 가능합니다', 'error');
+                    return;
+                }
+                
+                const file = files[0];
+                
+                // Validate file type
+                const allowedTypes = ['.pdf', '.docx', '.txt', '.md'];
+                const extension = '.' + file.name.split('.').pop().toLowerCase();
+                
+                if (!allowedTypes.includes(extension)) {
+                    showStatus('지원하지 않는 파일 형식: ' + extension, 'error');
+                    return;
+                }
+                
+                // Check file size
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                if (file.size > maxSize) {
+                    showStatus('파일 크기가 10MB를 초과합니다', 'error');
+                    return;
+                }
+                
+                showStatus('문서 분석 중...', 'loading');
+                debugLog('Analyzing document: ' + file.name);
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('question', '이 문서의 내용을 분석하고 주요 내용, 핵심 포인트, 그리고 중요한 인사이트를 요약해주세요.');
+                
+                fetch('/api/v1/analyze-document/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(function(result) {
+                    debugLog('Document analysis result:', result);
+                    
+                    if (result.status === 'success') {
+                        showStatus('문서 분석 완료!', 'success');
+                        
+                        // Display analysis result
+                        const analysisQuery = '문서 분석: ' + result.filename;
+                        
+                        parseAndDisplayResponse(
+                            analysisQuery,
+                            result.analysis,
+                            result.document_id,
+                            result.timestamp,
+                            false
+                        );
+                        
+                        // Clear file input
+                        document.getElementById('fileInput').value = '';
+                    } else {
+                        showStatus('분석 실패: ' + (result.message || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(function(error) {
+                    debugLog('Document analysis error:', error);
+                    showStatus('분석 오류: ' + error.message, 'error');
+                });
             }
             
             function addUrl() {
@@ -526,7 +946,7 @@ async def get_dashboard():
             
             function submitQuery() {
                 debugLog('Submit button clicked!');
-                const question = document.getElementById('questionInput').value.trim();
+                const question = document.getElementById('queryInput').value.trim();
                 if (!question) {
                     showStatus('Please enter a question', 'error');
                     return;
@@ -589,56 +1009,31 @@ async def get_dashboard():
             function clearSession() {
                 debugLog('Clear session button clicked');
                 currentSessionId = null;
-                document.getElementById('questionInput').value = '';
+                document.getElementById('queryInput').value = '';
                 document.getElementById('responseArea').textContent = 'New session started. You can now ask questions!';
                 showStatus('Session cleared', 'success');
             }
             
             // Initialize when page loads
-            function initializePage() {
-                debugLog('Initializing page...');
+            function initRagDashboard() {
+                debugLog('Initializing RAG Dashboard...');
                 
-                // Attach event listeners
-                const uploadBtn = document.getElementById('uploadBtn');
-                if (uploadBtn) {
-                    uploadBtn.onclick = uploadFiles;
-                    debugLog('Upload button listener attached');
-                }
+                // Setup file upload functionality
+                setupFileUpload();
                 
-                const urlBtn = document.getElementById('addUrlBtn');
-                if (urlBtn) {
-                    urlBtn.onclick = addUrl;
-                    debugLog('Add URL button listener attached');
-                }
-                
-                const analyzeUrlBtn = document.getElementById('analyzeUrlBtn');
-                if (analyzeUrlBtn) {
-                    analyzeUrlBtn.onclick = analyzeUrl;
-                    debugLog('Analyze URL button listener attached');
-                }
-                
-                const submitBtn = document.getElementById('submitBtn');
-                if (submitBtn) {
-                    submitBtn.onclick = function(e) {
+                // Set up form submission
+                const form = document.getElementById('queryForm');
+                if (form) {
+                    form.onsubmit = function(e) {
                         e.preventDefault();
                         submitQuery();
                     };
-                    debugLog('Submit button listener attached');
                 }
                 
-                const clearBtn = document.getElementById('clearBtn');
-                if (clearBtn) {
-                    clearBtn.onclick = function(e) {
-                        e.preventDefault();
-                        clearSession();
-                    };
-                    debugLog('Clear button listener attached');
-                }
-                
-                // Enter key submission
-                const questionInput = document.getElementById('questionInput');
-                if (questionInput) {
-                    questionInput.onkeypress = function(e) {
+                // Set up enter key submission
+                const queryInput = document.getElementById('queryInput');
+                if (queryInput) {
+                    queryInput.onkeypress = function(e) {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
                             submitQuery();
@@ -646,28 +1041,40 @@ async def get_dashboard():
                     };
                 }
                 
-                // Test backend connectivity
-                fetch('/api/v1/knowledge-base/stats')
-                    .then(function(response) {
-                        return response.json();
-                    })
-                    .then(function(data) {
-                        debugLog('Backend connectivity test passed', data);
-                        showStatus('Backend connected - ' + data.total_documents + ' documents in knowledge base', 'success');
-                    })
-                    .catch(function(error) {
-                        debugLog('Backend connectivity test failed', error);
-                        showStatus('Warning: Backend connection failed', 'error');
-                    });
+                // Set up web analysis buttons
+                const addUrlBtn = document.getElementById('addUrlBtn');
+                if (addUrlBtn) {
+                    addUrlBtn.onclick = function(e) {
+                        e.preventDefault();
+                        addUrl();
+                    };
+                }
                 
-                debugLog('Page initialization complete!');
+                const analyzeUrlBtn = document.getElementById('analyzeUrlBtn');
+                if (analyzeUrlBtn) {
+                    analyzeUrlBtn.onclick = function(e) {
+                        e.preventDefault();
+                        analyzeUrl();
+                    };
+                }
+                
+                // Set up clear session button
+                const clearBtn = document.getElementById('clearBtn');
+                if (clearBtn) {
+                    clearBtn.onclick = function(e) {
+                        e.preventDefault();
+                        clearSession();
+                    };
+                }
+                
+                debugLog('RAG Dashboard initialized successfully');
             }
             
             // Run initialization
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initializePage);
+                document.addEventListener('DOMContentLoaded', initRagDashboard);
             } else {
-                initializePage();
+                initRagDashboard();
             }
             
             console.log('Script finished loading');
@@ -756,6 +1163,106 @@ async def get_dashboard():
                     // Scroll to bottom
                     actualResponseContent.scrollTop = actualResponseContent.scrollHeight;
                 }
+            }
+
+            // File upload drag and drop functionality
+            function setupFileUpload() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('fileInput');
+                const fileList = document.getElementById('fileList');
+                const selectedFiles = document.getElementById('selectedFiles');
+                
+                // Click to select files
+                uploadArea.onclick = function() {
+                    fileInput.click();
+                };
+                
+                // File input change event
+                fileInput.onchange = function() {
+                    updateFileList();
+                };
+                
+                // Drag and drop events
+                uploadArea.ondragover = function(e) {
+                    e.preventDefault();
+                    uploadArea.classList.add('drag-over');
+                };
+                
+                uploadArea.ondragleave = function(e) {
+                    e.preventDefault();
+                    uploadArea.classList.remove('drag-over');
+                };
+                
+                uploadArea.ondrop = function(e) {
+                    e.preventDefault();
+                    uploadArea.classList.remove('drag-over');
+                    
+                    const files = e.dataTransfer.files;
+                    fileInput.files = files;
+                    updateFileList();
+                };
+            }
+            
+            function updateFileList() {
+                const fileInput = document.getElementById('fileInput');
+                const fileList = document.getElementById('fileList');
+                const selectedFiles = document.getElementById('selectedFiles');
+                
+                if (fileInput.files.length === 0) {
+                    fileList.style.display = 'none';
+                    return;
+                }
+                
+                fileList.style.display = 'block';
+                selectedFiles.innerHTML = '';
+                
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    const file = fileInput.files[i];
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    
+                    const fileSize = formatFileSize(file.size);
+                    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+                    
+                    // Check if file type is supported
+                    const allowedTypes = ['.pdf', '.docx', '.txt', '.md'];
+                    const isSupported = allowedTypes.includes(fileExtension);
+                    const isOversized = file.size > 10 * 1024 * 1024; // 10MB
+                    
+                    let statusIcon = '✅';
+                    let statusClass = 'file-valid';
+                    
+                    if (!isSupported) {
+                        statusIcon = '❌';
+                        statusClass = 'file-invalid';
+                    } else if (isOversized) {
+                        statusIcon = '⚠️';
+                        statusClass = 'file-warning';
+                    }
+                    
+                    li.innerHTML = statusIcon + ' <strong>' + file.name + '</strong> (' + fileSize + ')';
+                    li.className += ' ' + statusClass;
+                    
+                    selectedFiles.appendChild(li);
+                }
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            function clearFiles() {
+                const fileInput = document.getElementById('fileInput');
+                const fileList = document.getElementById('fileList');
+                
+                fileInput.value = '';
+                fileList.style.display = 'none';
+                
+                showStatus('파일 선택이 해제되었습니다', 'info');
             }
         </script>
     </body>

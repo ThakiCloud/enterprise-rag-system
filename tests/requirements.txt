@@ -4,3 +4,5 @@ httpx
 agno
 ag-ui-protocol
 tantivy
+PyPDF2 
+pypdf
