@@ -986,17 +986,17 @@ async def get_dashboard():
                 .then(function(result) {
                     debugLog('Query result:', result);
                     
-                    if (result.status === 'success') {
+                    if (result.answer) {
                         parseAndDisplayResponse(
-                            result.query,
-                            result.response,
+                            question,
+                            result.answer,
                             result.session_id,
-                            result.timestamp,
+                            new Date().toISOString(),
                             false
                         );
                         showStatus('Query completed successfully!', 'success');
                     } else {
-                        showStatus('Error: ' + (result.message || 'Unknown error'), 'error');
+                        showStatus('Error: ' + (result.message || 'No answer received'), 'error');
                     }
                 })
                 .catch(function(error) {

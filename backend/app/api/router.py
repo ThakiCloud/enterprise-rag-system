@@ -19,8 +19,9 @@ import pypdf
 
 from ..schemas.query import QueryRequest, QueryResponse
 from ..schemas.document import DocumentUploadResponse
-from ..schemas.session import SessionInfo
+from ..schemas.session import SessionInfo, SessionMemoryRequest, UserMemory
 from ..core.dependencies import get_rag_agent, get_research_team, get_knowledge_base, SimpleAgent, SimpleKnowledgeBase
+from ..core.memory_manager import session_memory_manager
 
 router = APIRouter()
 
@@ -235,13 +236,15 @@ async def query_knowledge(
         reasoning_steps = None
         
         return QueryResponse(
-            query=request.question,
-            response=response,
+            answer=response,
             session_id=session_id,
+            user_id=request.user_id,
             sources=sources,
-            reasoning_steps=reasoning_steps,
-            timestamp=datetime.now().isoformat(),
-            status="success"
+            processing_time=None,
+            memory_updated=False,
+            memory_count=0,
+            tokens_used=None,
+            model_used=None
         )
     except Exception as e:
         logger.error(f"Error processing query: {str(e)}", exc_info=True)
@@ -252,10 +255,11 @@ async def query_knowledge(
 async def query_knowledge_stream(
     request: QueryRequest
 ):
-    """Process a query using the RAG system with streaming response."""
+    """Process a query using the RAG system with streaming response and memory support."""
     try:
         logger.info(f"Received streaming query request for session: {request.session_id}")
         session_id = request.session_id or f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        user_id = request.user_id or session_id  # Use session_id as fallback user_id
         
         logger.info(f"Getting agent for streaming query (advanced_reasoning={request.use_advanced_reasoning})...")
         rag_agent = get_rag_agent()
@@ -263,10 +267,38 @@ async def query_knowledge_stream(
         agent = research_team if request.use_advanced_reasoning else rag_agent
         logger.info(f"Using agent: {agent.name if hasattr(agent, 'name') else 'SimpleAgent'}")
         
+        # Get relevant memories for context if memory is enabled
+        relevant_memories = []
+        if request.use_memory and user_id:
+            try:
+                relevant_memories = session_memory_manager.get_relevant_memories_for_query(
+                    user_id=user_id, 
+                    query=request.question,
+                    limit=3
+                )
+                logger.info(f"Found {len(relevant_memories)} relevant memories for user {user_id}")
+            except Exception as e:
+                logger.warning(f"Failed to get relevant memories: {e}")
+        
         async def generate_response():
             try:
                 logger.info(f"Executing agent with question: '{request.question}'")
-                response = await agent.arun(request.question)
+                
+                # Prepare context with relevant memories
+                context_info = ""
+                if relevant_memories:
+                    memory_context = "\n".join([
+                        f"- {mem.memory} (관련 토픽: {', '.join(mem.topics)})" 
+                        for mem in relevant_memories
+                    ])
+                    context_info = f"\n\n이전 대화 내용:\n{memory_context}\n"
+                
+                # Add context to question if memories exist
+                enhanced_question = request.question
+                if context_info:
+                    enhanced_question = f"{request.question}{context_info}"
+                
+                response = await agent.arun(enhanced_question, user_id=user_id, session_id=session_id)
                 logger.info("Agent execution finished, starting streaming response.")
                 
                 # Parse response to handle <think> tags
@@ -325,6 +357,26 @@ async def query_knowledge_stream(
                     else:
                         await asyncio.sleep(0.05)  # Short pause for regular words
                 
+                # Create memory from conversation if enabled
+                memory_updated = False
+                memory_count = 0
+                if request.use_memory and user_id:
+                    try:
+                        # Create memories from this conversation
+                        conversation_messages = [
+                            {"role": "user", "content": request.question},
+                            {"role": "assistant", "content": main_response}
+                        ]
+                        session_memory_manager.create_memories_from_conversation(
+                            user_id=user_id,
+                            messages=conversation_messages
+                        )
+                        memory_updated = True
+                        memory_count = session_memory_manager.get_memory_count(user_id)
+                        logger.info(f"Updated memories for user {user_id}, total count: {memory_count}")
+                    except Exception as e:
+                        logger.warning(f"Failed to create memories: {e}")
+                
                 # Send completion signal
                 completion_data = {
                     "is_complete": True,
@@ -332,6 +384,10 @@ async def query_knowledge_stream(
                     "full_response": main_response,
                     "think_content": think_content if think_content else None,
                     "session_id": session_id,
+                    "user_id": user_id,
+                    "memory_updated": memory_updated,
+                    "memory_count": memory_count,
+                    "relevant_memories_count": len(relevant_memories),
                     "timestamp": datetime.now().isoformat(),
                     "status": "completed"
                 }
@@ -565,14 +621,143 @@ async def get_session(
 ):
     """Get information about a specific session."""
     try:
+        # Use session_id as user_id for memory lookup
+        user_id = session_id
+        memory_count = session_memory_manager.get_memory_count(user_id)
+        
         return SessionInfo(
             session_id=session_id,
+            user_id=user_id,
             created_at=datetime.now().isoformat(),
             last_activity=datetime.now().isoformat(),
-            query_count=0
+            query_count=0,
+            has_memory=memory_count > 0,
+            memory_count=memory_count
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting session info: {str(e)}")
+
+
+@router.post("/sessions/{session_id}/memories")
+async def manage_session_memory(
+    session_id: str,
+    request: SessionMemoryRequest
+):
+    """Manage memories for a session"""
+    try:
+        user_id = request.user_id or session_id
+        
+        if request.action == "get":
+            memories = session_memory_manager.get_user_memories(user_id, limit=20)
+            return {
+                "session_id": session_id,
+                "user_id": user_id,
+                "memories": memories,
+                "total_count": len(memories),
+                "status": "success"
+            }
+        
+        elif request.action == "add":
+            if not request.memory_content:
+                raise HTTPException(status_code=400, detail="Memory content is required for add action")
+            
+            memory_id = session_memory_manager.add_user_memory(
+                user_id=user_id,
+                memory_content=request.memory_content,
+                topics=request.topics or []
+            )
+            
+            return {
+                "session_id": session_id,
+                "user_id": user_id,
+                "memory_id": memory_id,
+                "message": "Memory added successfully",
+                "status": "success"
+            }
+        
+        elif request.action == "delete":
+            if not request.memory_id:
+                raise HTTPException(status_code=400, detail="Memory ID is required for delete action")
+            
+            success = session_memory_manager.delete_user_memory(user_id, request.memory_id)
+            
+            if success:
+                return {
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "message": "Memory deleted successfully",
+                    "status": "success"
+                }
+            else:
+                raise HTTPException(status_code=404, detail="Memory not found or could not be deleted")
+        
+        elif request.action == "clear":
+            success = session_memory_manager.clear_user_memories(user_id)
+            
+            if success:
+                return {
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "message": "All memories cleared successfully",
+                    "status": "success"
+                }
+            else:
+                raise HTTPException(status_code=500, detail="Failed to clear memories")
+        
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action. Use 'get', 'add', 'delete', or 'clear'")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error managing session memory: {e}")
+        raise HTTPException(status_code=500, detail=f"Error managing session memory: {str(e)}")
+
+
+@router.get("/sessions/{session_id}/memories")
+async def get_session_memories(
+    session_id: str,
+    limit: int = 10
+):
+    """Get memories for a session"""
+    try:
+        user_id = session_id  # Use session_id as user_id
+        memories = session_memory_manager.get_user_memories(user_id, limit=limit)
+        
+        return {
+            "session_id": session_id,
+            "user_id": user_id,
+            "memories": memories,
+            "total_count": len(memories),
+            "status": "success"
+        }
+    except Exception as e:
+        logger.error(f"Error getting session memories: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting session memories: {str(e)}")
+
+
+@router.post("/sessions/{session_id}/search-memories")
+async def search_session_memories(
+    session_id: str,
+    query: str = Body(..., embed=True),
+    limit: int = Body(5, embed=True)
+):
+    """Search memories for a session based on query"""
+    try:
+        user_id = session_id  # Use session_id as user_id
+        memories = session_memory_manager.search_user_memories(user_id, query, limit)
+        
+        return {
+            "session_id": session_id,
+            "user_id": user_id,
+            "query": query,
+            "memories": memories,
+            "found_count": len(memories),
+            "status": "success"
+        }
+    except Exception as e:
+        logger.error(f"Error searching session memories: {e}")
+        raise HTTPException(status_code=500, detail=f"Error searching session memories: {str(e)}")
 
 
 @router.get("/knowledge-base/stats")

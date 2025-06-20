@@ -39,8 +39,16 @@ class BackendRAGAgent(Agent):
             response.raise_for_status()
             data = response.json()
             
+            # Check if we have the expected response format
+            if "answer" not in data:
+                raise ValueError(f"Invalid response format from backend: {data}")
+            
             # Format the response
-            formatted_response = data["response"]
+            formatted_response = data["answer"]
+            
+            # Add memory information if available
+            if data.get("memory_updated") and data.get("memory_count", 0) > 0:
+                formatted_response += f"\n\n💾 **Memory Updated:** {data['memory_count']} memories stored"
             
             if data.get("sources"):
                 formatted_response += "\n\n**📚 Sources:**\n"
@@ -59,15 +67,23 @@ class BackendRAGAgent(Agent):
                     self.content = content
                     self.sources = data.get("sources", [])
                     self.reasoning = data.get("reasoning_steps")
+                    self.session_id = data.get("session_id")
+                    self.memory_count = data.get("memory_count", 0)
             
             return MockResponse(formatted_response)
             
         except requests.RequestException as e:
             class ErrorResponse:
                 def __init__(self, error_msg, backend_url):
-                    self.content = f"❌ **Backend Error:** {error_msg}\n\nPlease ensure the backend server is running at {backend_url}"
+                    self.content = f"❌ **Backend Connection Error:** {error_msg}\n\nPlease ensure the backend server is running at {backend_url}"
             
             return ErrorResponse(str(e), self.backend_url)
+        except (ValueError, KeyError) as e:
+            class ErrorResponse:
+                def __init__(self, error_msg):
+                    self.content = f"❌ **Response Format Error:** {error_msg}\n\nThe backend returned an unexpected response format."
+            
+            return ErrorResponse(str(e))
 
 # Create the backend-connected agent
 chat_agent = BackendRAGAgent(

@@ -2,6 +2,23 @@ from agno.agent import Agent
 from agno.models.base import Model
 from agno.models.openai import OpenAIChat
 from agno.embedder.openai import OpenAIEmbedder
+
+# Try to import agno memory modules, but handle if not available
+try:
+    from agno.memory.v2.memory import Memory
+    from agno.memory.v2.db.sqlite import SqliteMemoryDb
+    AGNO_MEMORY_AVAILABLE = True
+except ImportError:
+    AGNO_MEMORY_AVAILABLE = False
+    # Create dummy classes
+    class Memory:
+        def __init__(self, *args, **kwargs):
+            pass
+    
+    class SqliteMemoryDb:
+        def __init__(self, *args, **kwargs):
+            pass
+
 # Only import models that are actually working
 try:
     from agno.models.anthropic import AnthropicChat
@@ -33,8 +50,10 @@ except ImportError:
     ThinkingTools = None
 
 from agno.knowledge.text import AgentKnowledge
+from pathlib import Path
 
 from ..core import config
+from ..core.memory_manager import session_memory_manager
 
 def get_model() -> Model:
     """Creates and returns a chat model instance based on the provider specified in config."""
@@ -130,8 +149,23 @@ def create_knowledge_base():
         ),
     )
 
-def create_rag_agent(knowledge_base: AgentKnowledge):
-    """Create the main RAG agent"""
+def create_memory_db():
+    """Create memory database for agents"""
+    if not AGNO_MEMORY_AVAILABLE:
+        return None
+    
+    try:
+        memory_db_path = Path(config.DB_FILE).parent / "agent_memories.db"
+        return SqliteMemoryDb(
+            table_name="agent_memories",
+            db_file=str(memory_db_path)
+        )
+    except Exception as e:
+        print(f"Failed to create memory database: {e}")
+        return None
+
+def create_rag_agent(knowledge_base: AgentKnowledge, enable_memory: bool = True):
+    """Create the main RAG agent with memory support"""
     knowledge_tools = KnowledgeTools(
         knowledge=knowledge_base,
         think=True,
@@ -140,18 +174,36 @@ def create_rag_agent(knowledge_base: AgentKnowledge):
         add_few_shot=True,
     )
     
+    # Setup memory if enabled
+    memory = None
+    if enable_memory and AGNO_MEMORY_AVAILABLE:
+        try:
+            memory_db = create_memory_db()
+            if memory_db:
+                memory = Memory(
+                    model=get_model(),
+                    db=memory_db
+                )
+        except Exception as e:
+            print(f"Memory initialization failed: {e}")
+            memory = None
+    
     return Agent(
         name="Enterprise RAG Assistant",
         role="Advanced document analysis and knowledge retrieval specialist",
         agent_id=config.RAG_AGENT_ID,
         model=get_model(),
         tools=[knowledge_tools],
+        memory=memory,
+        enable_user_memories=enable_memory,
         instructions=[
             "당신은 문서 분석 전문 기업용 RAG 어시스턴트입니다.",
             "반드시 한국어로만 답변해주세요. 영어나 다른 언어로 답변하지 마세요.",
             "사용 가능한 문서를 바탕으로 항상 포괄적인 답변을 제공하세요.",
             "답변에 관련 소스와 인용을 포함하세요.",
             "친근하고 전문적인 톤으로 답변하세요.",
+            "이전 대화 내용을 기억하고 연관성 있는 답변을 제공하세요.",
+            "사용자의 선호도와 관심사를 기억하여 개인화된 답변을 제공하세요.",
         ],
         storage=SqliteStorage(
             table_name="rag_agent_sessions",
@@ -165,8 +217,8 @@ def create_rag_agent(knowledge_base: AgentKnowledge):
         show_tool_calls=False,
     )
 
-def create_reasoning_agent(knowledge_base: AgentKnowledge):
-    """Create the advanced reasoning agent"""
+def create_reasoning_agent(knowledge_base: AgentKnowledge, enable_memory: bool = True):
+    """Create the advanced reasoning agent with memory support"""
     knowledge_tools = KnowledgeTools(knowledge=knowledge_base)
     
     tools = [knowledge_tools]
@@ -175,17 +227,35 @@ def create_reasoning_agent(knowledge_base: AgentKnowledge):
     if ThinkingTools:
         tools.append(ThinkingTools(add_instructions=True))
     
+    # Setup memory if enabled
+    memory = None
+    if enable_memory and AGNO_MEMORY_AVAILABLE:
+        try:
+            memory_db = create_memory_db()
+            if memory_db:
+                memory = Memory(
+                    model=get_model(),
+                    db=memory_db
+                )
+        except Exception as e:
+            print(f"Memory initialization failed for reasoning agent: {e}")
+            memory = None
+    
     return Agent(
         name="Reasoning Specialist",
         role="Advanced reasoning and analysis expert",
         agent_id=config.REASONING_AGENT_ID,
         model=get_model(),
         tools=tools,
+        memory=memory,
+        enable_user_memories=enable_memory,
         instructions=[
             "당신은 추론 전문가입니다. 복잡한 문제를 단계별로 분석하세요.",
             "반드시 한국어로만 답변해주세요. 영어나 다른 언어로 답변하지 마세요.",
             "복잡한 질문에는 연쇄 사고(chain-of-thought) 방식을 사용하세요.",
             "논리적이고 체계적인 분석을 제공하세요.",
+            "이전 대화 맥락을 고려하여 일관성 있는 추론을 제공하세요.",
+            "사용자의 관심 분야와 지식 수준을 기억하여 적절한 설명을 제공하세요.",
         ],
         storage=SqliteStorage(
             table_name="reasoning_agent_sessions",
@@ -200,18 +270,36 @@ def create_reasoning_agent(knowledge_base: AgentKnowledge):
         reasoning=False,
     )
 
-def create_research_team(rag_agent: Agent, reasoning_agent: Agent):
-    """Create the research team that combines RAG and reasoning agents"""
+def create_research_team(rag_agent: Agent, reasoning_agent: Agent, enable_memory: bool = True):
+    """Create the research team that combines RAG and reasoning agents with memory support"""
+    # Setup memory if enabled
+    memory = None
+    if enable_memory and AGNO_MEMORY_AVAILABLE:
+        try:
+            memory_db = create_memory_db()
+            if memory_db:
+                memory = Memory(
+                    model=get_model(),
+                    db=memory_db
+                )
+        except Exception as e:
+            print(f"Memory initialization failed for research team: {e}")
+            memory = None
+    
     return Team(
         name="Enterprise Research Team",
         members=[rag_agent, reasoning_agent],
         mode="coordinate",
         model=get_model(),
+        memory=memory,
+        enable_user_memories=enable_memory,
         instructions=[
             "RAG와 추론 에이전트 간의 협력을 통해 최적의 결과를 도출하세요.",
             "반드시 한국어로만 답변해주세요. 영어나 다른 언어로 답변하지 마세요.",
             "먼저 정보를 수집한 다음 추론과 분석을 적용하세요.",
             "팀워크를 통해 포괄적이고 정확한 답변을 제공하세요.",
+            "팀원들이 이전 대화 내용과 사용자 선호도를 공유하여 일관성 있는 답변을 제공하세요.",
+            "사용자의 질문 패턴과 관심사를 기억하여 더 적절한 협업을 수행하세요.",
         ],
         team_id=config.RESEARCH_TEAM_ID,
         storage=SqliteStorage(

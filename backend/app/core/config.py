@@ -45,4 +45,18 @@ CUSTOM_MODEL_NAME = os.getenv("CUSTOM_MODEL_NAME")
 # --- Agent IDs ---
 RAG_AGENT_ID = "enterprise-rag-agent"
 REASONING_AGENT_ID = "reasoning-specialist"
-RESEARCH_TEAM_ID = "enterprise-research-team" 
+RESEARCH_TEAM_ID = "enterprise-research-team"
+
+# --- Memory System Configuration ---
+ENABLE_MEMORY_SYSTEM = os.getenv("ENABLE_MEMORY_SYSTEM", "true").lower() == "true"
+MEMORY_DB_PATH = Path(os.getenv("MEMORY_DB_PATH", str(TMP_DIR / "session_memories.db")))
+USE_MEMORY_DEFAULT = os.getenv("USE_MEMORY_DEFAULT", "true").lower() == "true"
+MAX_MEMORY_CONTEXT = int(os.getenv("MAX_MEMORY_CONTEXT", "3"))
+MAX_HISTORY_MESSAGES = int(os.getenv("MAX_HISTORY_MESSAGES", "5"))
+
+# Memory model configuration (uses same provider as main model by default)
+MEMORY_MODEL_PROVIDER = os.getenv("MEMORY_MODEL_PROVIDER", MODEL_PROVIDER).lower()
+MEMORY_MODEL_NAME = os.getenv("MEMORY_MODEL_NAME", OPENAI_MODEL_NAME)
+
+# Create memory database directory
+MEMORY_DB_PATH.parent.mkdir(parents=True, exist_ok=True) 

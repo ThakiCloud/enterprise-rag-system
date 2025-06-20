@@ -9,6 +9,8 @@ A comprehensive Retrieval-Augmented Generation (RAG) system designed for enterpr
 - **Hybrid Search**: Combines vector similarity and BM25 for optimal retrieval
 - **Reasoning Capabilities**: Chain-of-thought reasoning for complex queries
 - **Session Management**: Persistent conversation history
+- **🧠 Intelligent Memory System**: Agno-powered user memory for personalized conversations
+- **Context-Aware Responses**: Remember user preferences and conversation history
 - **Enterprise Ready**: Docker, Kubernetes, and Terraform support
 - **Modern UI**: AGUIApp-based interface with real-time streaming
 
@@ -193,6 +195,77 @@ terraform apply
 - **Health Check**: `/health/` endpoint
 - **Metrics**: Prometheus-compatible metrics (planned)
 - **Logs**: Structured logging with correlation IDs
+
+## 🧠 Memory System
+
+This RAG system features an intelligent memory system powered by Agno that enables personalized, context-aware conversations.
+
+### Key Features
+
+- **User-Specific Memory**: Each user/session maintains separate memory storage
+- **Automatic Memory Creation**: Conversations are automatically processed to extract relevant memories
+- **Semantic Memory Search**: Find relevant memories based on query context
+- **Memory Management**: Add, update, delete, and search memories via API
+- **Cross-Session Persistence**: Memories persist across multiple conversation sessions
+
+### API Endpoints
+
+#### Query with Memory
+```bash
+POST /api/query/stream/
+{
+  "question": "안녕하세요, 저는 개발자입니다",
+  "session_id": "user123",
+  "user_id": "user123",
+  "use_memory": true
+}
+```
+
+#### Memory Management
+```bash
+# Get memories for a session
+GET /api/sessions/{session_id}/memories?limit=10
+
+# Search memories
+POST /api/sessions/{session_id}/search-memories
+{
+  "query": "개발자",
+  "limit": 5
+}
+
+# Add memory manually
+POST /api/sessions/{session_id}/memories
+{
+  "action": "add",
+  "memory_content": "사용자는 Python 개발자입니다",
+  "topics": ["개발", "Python"]
+}
+
+# Clear all memories
+POST /api/sessions/{session_id}/memories
+{
+  "action": "clear"
+}
+```
+
+### Memory Configuration
+
+The memory system uses SQLite by default for storage:
+
+```bash
+# Memory database location
+MEMORY_DB_PATH=tmp/session_memories.db
+
+# Enable/disable memory for queries
+USE_MEMORY_DEFAULT=true
+```
+
+### How It Works
+
+1. **Automatic Memory Creation**: When users interact with the system, conversations are analyzed and key information is extracted as memories
+2. **Context Injection**: Relevant memories are automatically retrieved and injected into the conversation context
+3. **Semantic Search**: The system uses AI models to find the most relevant memories for each query
+4. **Personalized Responses**: Agents use memory context to provide more personalized and contextually appropriate responses
 
 ## 🔧 Development
 

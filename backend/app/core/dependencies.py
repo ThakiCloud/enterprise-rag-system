@@ -38,7 +38,7 @@ class SimpleAgent:
         self.name = name
         self.knowledge_base = knowledge_base
         
-    async def arun(self, query: str):
+    async def arun(self, query: str, user_id: str = None, session_id: str = None):
         # Simple implementation that searches knowledge base
         results = self.knowledge_base.search(query)
         if results:
@@ -59,7 +59,7 @@ class LMStudioAgent:
         )
         self.model_id = config.CUSTOM_MODEL_NAME
         
-    async def arun(self, query: str):
+    async def arun(self, query: str, user_id: str = None, session_id: str = None):
         try:
             # Search knowledge base first
             results = self.knowledge_base.search(query)
@@ -157,12 +157,12 @@ def get_knowledge_base() -> SimpleKnowledgeBase:
     return _knowledge_base
 
 
-def get_rag_agent() -> SimpleAgent:
+def get_rag_agent(enable_memory: bool = True) -> SimpleAgent:
     global _rag_agent
     if _rag_agent is None:
         kb = get_knowledge_base()
         if _use_advanced_stack():
-            _rag_agent = create_rag_agent(kb)
+            _rag_agent = create_rag_agent(kb, enable_memory=enable_memory)
         else:
             # Check if we should use LM Studio agent
             from ..core import config
@@ -173,12 +173,12 @@ def get_rag_agent() -> SimpleAgent:
     return _rag_agent
 
 
-def get_reasoning_agent() -> SimpleAgent:
+def get_reasoning_agent(enable_memory: bool = True) -> SimpleAgent:
     global _reasoning_agent
     if _reasoning_agent is None:
         kb = get_knowledge_base()
         if _use_advanced_stack():
-            _reasoning_agent = create_reasoning_agent(kb)
+            _reasoning_agent = create_reasoning_agent(kb, enable_memory=enable_memory)
         else:
             # Check if we should use LM Studio agent
             from ..core import config
@@ -189,11 +189,15 @@ def get_reasoning_agent() -> SimpleAgent:
     return _reasoning_agent
 
 
-def get_research_team() -> SimpleAgent:
+def get_research_team(enable_memory: bool = True) -> SimpleAgent:
     global _research_team
     if _research_team is None:
         if _use_advanced_stack():
-            _research_team = create_research_team(get_rag_agent(), get_reasoning_agent())
+            _research_team = create_research_team(
+                get_rag_agent(enable_memory=enable_memory), 
+                get_reasoning_agent(enable_memory=enable_memory),
+                enable_memory=enable_memory
+            )
         else:
             # Check if we should use LM Studio agent
             from ..core import config
