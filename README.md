@@ -148,46 +148,53 @@ enterprise-rag-system/
 │   ├── config.py
 │   ├── requirements.txt
 │   └── Dockerfile
-├── infrastructure/         # Deployment configs
-│   ├── docker-compose.yml
-│   ├── k8s/              # Kubernetes manifests
-│   └── terraform/        # Infrastructure as Code
+├── infrastructure/         # Simple deployment
+│   └── docker-compose.yml
 ├── tests/                 # Test suites
 └── docs/                  # Documentation
 ```
 
-## 🧪 Testing
+## 🧪 Testing & Code Quality
 
+### 로컬 테스트
 ```bash
 # Install test dependencies
 pip install -r tests/requirements.txt
 
 # Run tests
 pytest tests/
+
+# Basic syntax check
+pip install flake8
+flake8 backend/app --select=E9,F63,F7,F82
 ```
+
+### CI/CD 프로세스
+- **자동 실행**: 모든 커밋/PR에서 기본 문법 검사 & 테스트 자동 실행
+- **수동 배포**: GitHub Actions에서 명시적으로 빌드/배포 요청
+- **상세 가이드**: [CI/CD 가이드](docs/cicd-guide.md) 참고
 
 ## 🚢 Deployment
 
-### Docker Compose (Development)
+### Quick Start
 
 ```bash
-docker-compose -f infrastructure/docker-compose.yml up -d
+# Set required environment variable
+export OPENAI_API_KEY="your-api-key-here"
+
+# One-command deployment
+./deploy.sh
 ```
 
-### Kubernetes (Production)
+### Manual Docker Compose
 
 ```bash
-# Apply Kubernetes manifests
-kubectl apply -f infrastructure/k8s/
-```
+# Set environment variable
+export OPENAI_API_KEY="your-api-key-here"
 
-### AWS with Terraform
-
-```bash
-cd infrastructure/terraform
-terraform init
-terraform plan
-terraform apply
+# Build and run
+cd infrastructure
+docker-compose up -d
 ```
 
 ## 📊 Monitoring
