@@ -6,6 +6,7 @@ pydantic
 httpx
 agno
 ag-ui-protocol
+tantivy
 # AGUIApp and related dependencies
 # Note: Replace with actual agno package when available
 # agno

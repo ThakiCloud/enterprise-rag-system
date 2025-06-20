@@ -1,20 +1,42 @@
 from agno.agent import Agent
-from agno.models.base import ChatModel
+from agno.models.base import Model
 from agno.models.openai import OpenAIChat
-from agno.models.anthropic import AnthropicChat
-from agno.models.google import GoogleChat
-from agno.models.ollama import OllamaChat
+from agno.embedder.openai import OpenAIEmbedder
+# Only import models that are actually working
+try:
+    from agno.models.anthropic import AnthropicChat
+except ImportError:
+    AnthropicChat = None
+
+try:
+    from agno.models.google import GoogleChat
+except ImportError:
+    GoogleChat = None
+
+try:
+    from agno.models.ollama import OllamaChat
+except ImportError:
+    OllamaChat = None
+
 from agno.tools.knowledge import KnowledgeTools
 from agno.vectordb.lancedb import LanceDb, SearchType
 from agno.storage.sqlite import SqliteStorage
 from agno.team import Team
-from agno.tools.reasoning import ReasoningTools
-from agno.tools.thinking import ThinkingTools
+try:
+    from agno.tools.reasoning import ReasoningTools
+except ImportError:
+    ReasoningTools = None
+
+try:
+    from agno.tools.thinking import ThinkingTools
+except ImportError:
+    ThinkingTools = None
+
 from agno.knowledge.text import AgentKnowledge
 
 from ..core import config
 
-def get_model() -> ChatModel:
+def get_model() -> Model:
     """Creates and returns a chat model instance based on the provider specified in config."""
     provider = config.MODEL_PROVIDER
     
@@ -24,21 +46,27 @@ def get_model() -> ChatModel:
         return OpenAIChat(id=config.OPENAI_MODEL_NAME, api_key=config.OPENAI_API_KEY)
     
     if provider == "anthropic":
+        if not AnthropicChat:
+            raise ValueError("Anthropic model not available. Please install compatible anthropic library.")
         if not config.ANTHROPIC_API_KEY:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set for provider 'anthropic'")
         return AnthropicChat(id=config.ANTHROPIC_MODEL_NAME, api_key=config.ANTHROPIC_API_KEY)
         
     if provider == "google":
+        if not GoogleChat:
+            raise ValueError("Google model not available. Please install compatible google library.")
         if not config.GOOGLE_API_KEY:
             raise ValueError("GOOGLE_API_KEY environment variable not set for provider 'google'")
         return GoogleChat(id=config.GOOGLE_MODEL_NAME, api_key=config.GOOGLE_API_KEY)
 
     if provider == "ollama":
+        if not OllamaChat:
+            raise ValueError("Ollama model not available. Please install compatible ollama library.")
         return OllamaChat(id=config.OLLAMA_MODEL_NAME, base_url=config.OLLAMA_BASE_URL)
 
     if provider == "lm-studio":
         return OpenAIChat(
-            id=config.CUSTOM_MODEL_NAME, # LM Studio doesn't use model id from here
+            id=config.CUSTOM_MODEL_NAME,
             api_key="not-needed",
             base_url=config.LM_STUDIO_BASE_URL,
         )
@@ -54,6 +82,42 @@ def get_model() -> ChatModel:
         
     raise ValueError(f"Unsupported model provider specified: {provider}")
 
+def get_embedder():
+    """Creates and returns an embedder instance based on the provider specified in config."""
+    provider = config.MODEL_PROVIDER
+    
+    if provider == "lm-studio":
+        # Use LM Studio's embedding model
+        return OpenAIEmbedder(
+            id="text-embedding-nomic-embed-text-v1.5",
+            api_key="not-needed",
+            base_url=config.LM_STUDIO_BASE_URL,
+        )
+    elif provider == "openai":
+        if not config.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY environment variable not set for provider 'openai'")
+        return OpenAIEmbedder(
+            id="text-embedding-ada-002",
+            api_key=config.OPENAI_API_KEY,
+        )
+    else:
+        # For other providers, try to use LM Studio if available, otherwise OpenAI
+        try:
+            return OpenAIEmbedder(
+                id="text-embedding-nomic-embed-text-v1.5",
+                api_key="not-needed",
+                base_url=config.LM_STUDIO_BASE_URL,
+            )
+        except:
+            # Fallback to OpenAI if LM Studio not available
+            if config.OPENAI_API_KEY:
+                return OpenAIEmbedder(
+                    id="text-embedding-ada-002",
+                    api_key=config.OPENAI_API_KEY,
+                )
+            else:
+                raise ValueError("No embedder available. Please set up LM Studio or OpenAI API key.")
+
 def create_knowledge_base():
     """Initialize the vector database and knowledge base"""
     return AgentKnowledge(
@@ -62,6 +126,7 @@ def create_knowledge_base():
             uri=str(config.VECTOR_DB_PATH),
             table_name="enterprise_documents",
             search_type=SearchType.hybrid,
+            embedder=get_embedder(),
         ),
     )
 
@@ -73,8 +138,6 @@ def create_rag_agent(knowledge_base: AgentKnowledge):
         search=True,
         analyze=True,
         add_few_shot=True,
-        num_documents=10,
-        chunk_size=1000,
     )
     
     return Agent(
@@ -94,26 +157,28 @@ def create_rag_agent(knowledge_base: AgentKnowledge):
             auto_upgrade_schema=True
         ),
         add_history_to_messages=True,
-        num_history_responses=10,
-        add_datetime_to_instructions=True,
+        num_history_responses=5,
+        add_datetime_to_instructions=False,
         markdown=True,
-        show_tool_calls=True,
+        show_tool_calls=False,
     )
 
 def create_reasoning_agent(knowledge_base: AgentKnowledge):
     """Create the advanced reasoning agent"""
-    knowledge_tools = KnowledgeTools(knowledge=knowledge_base, num_documents=5)
+    knowledge_tools = KnowledgeTools(knowledge=knowledge_base)
+    
+    tools = [knowledge_tools]
+    if ReasoningTools:
+        tools.append(ReasoningTools(add_instructions=True))
+    if ThinkingTools:
+        tools.append(ThinkingTools(add_instructions=True))
     
     return Agent(
         name="Reasoning Specialist",
         role="Advanced reasoning and analysis expert",
         agent_id=config.REASONING_AGENT_ID,
         model=get_model(),
-        tools=[
-            knowledge_tools,
-            ReasoningTools(add_instructions=True),
-            ThinkingTools(add_instructions=True),
-        ],
+        tools=tools,
         instructions=[
             "You are a reasoning specialist. Break down complex problems.",
             "Use chain-of-thought for complex queries.",
@@ -124,11 +189,11 @@ def create_reasoning_agent(knowledge_base: AgentKnowledge):
             auto_upgrade_schema=True
         ),
         add_history_to_messages=True,
-        num_history_responses=5,
-        add_datetime_to_instructions=True,
+        num_history_responses=3,
+        add_datetime_to_instructions=False,
         markdown=True,
-        show_tool_calls=True,
-        reasoning=True,
+        show_tool_calls=False,
+        reasoning=False,
     )
 
 def create_research_team(rag_agent: Agent, reasoning_agent: Agent):
@@ -148,8 +213,8 @@ def create_research_team(rag_agent: Agent, reasoning_agent: Agent):
             db_file=str(config.DB_FILE),
             auto_upgrade_schema=True
         ),
-        add_datetime_to_instructions=True,
+        add_datetime_to_instructions=False,
         markdown=True,
-        show_tool_calls=True,
-        show_members_responses=True,
+        show_tool_calls=False,
+        show_members_responses=False,
     ) 

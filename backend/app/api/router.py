@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Body
 from datetime import datetime
 from typing import List, Dict, Any
 import logging
+import requests
+from bs4 import BeautifulSoup
+import re
 
 from ..schemas.query import QueryRequest, QueryResponse
 from ..schemas.document import DocumentUploadResponse
@@ -13,6 +16,78 @@ router = APIRouter()
 # Set up logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+def extract_web_content(url: str) -> Dict[str, Any]:
+    """Extract content from a web URL"""
+    try:
+        # Set headers to mimic a real browser
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        # Fetch the webpage
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Parse HTML content
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Remove script and style elements
+        for script in soup(["script", "style", "nav", "footer", "header", "aside"]):
+            script.decompose()
+        
+        # Extract title
+        title = soup.find('title')
+        title_text = title.get_text().strip() if title else "No title"
+        
+        # Extract main content
+        # Try to find main content areas
+        main_content = soup.find('main') or soup.find('article') or soup.find('div', class_=re.compile(r'content|main|article', re.I))
+        
+        if main_content:
+            content_text = main_content.get_text()
+        else:
+            # Fallback to body content
+            content_text = soup.get_text()
+        
+        # Clean up the text
+        lines = (line.strip() for line in content_text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        content_text = ' '.join(chunk for chunk in chunks if chunk)
+        
+        # Extract meta description
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        description = meta_desc.get('content', '') if meta_desc else ''
+        
+        # Extract headings for structure
+        headings = []
+        for heading in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+            headings.append(f"{heading.name}: {heading.get_text().strip()}")
+        
+        return {
+            'url': url,
+            'title': title_text,
+            'description': description,
+            'content': content_text[:5000],  # Limit content length
+            'headings': headings[:10],  # Limit number of headings
+            'word_count': len(content_text.split()),
+            'status': 'success'
+        }
+        
+    except requests.RequestException as e:
+        logger.error(f"Error fetching URL {url}: {e}")
+        return {
+            'url': url,
+            'error': f"Failed to fetch URL: {str(e)}",
+            'status': 'error'
+        }
+    except Exception as e:
+        logger.error(f"Error processing URL {url}: {e}")
+        return {
+            'url': url,
+            'error': f"Failed to process content: {str(e)}",
+            'status': 'error'
+        }
 
 @router.post("/query/", response_model=QueryResponse)
 async def query_knowledge(
@@ -96,23 +171,99 @@ async def add_url_endpoint(
 ):
     """Add URL content to the knowledge base."""
     try:
+        logger.info(f"Processing URL: {url}")
+        
         # Basic URL validation
         if not url.startswith(('http://', 'https://')):
             raise HTTPException(status_code=400, detail="URL must start with http:// or https://")
         
-        # Simple URL processing - just add a placeholder
+        # Extract web content
+        content_data = extract_web_content(url)
+        
+        if content_data['status'] == 'error':
+            raise HTTPException(status_code=400, detail=content_data['error'])
+        
+        # Prepare content for knowledge base
+        formatted_content = f"""
+URL: {content_data['url']}
+Title: {content_data['title']}
+Description: {content_data['description']}
+
+Headings:
+{chr(10).join(content_data['headings'])}
+
+Content:
+{content_data['content']}
+        """.strip()
+        
+        # Add to knowledge base
         knowledge_base = get_knowledge_base()
-        knowledge_base.add_document(f"Content from URL: {url}", {"url": url, "type": "url"})
+        metadata = {
+            "url": url,
+            "title": content_data['title'],
+            "type": "web_content",
+            "word_count": content_data['word_count'],
+            "extracted_at": datetime.now().isoformat()
+        }
+        
+        knowledge_base.add_document(formatted_content, metadata)
+        
+        logger.info(f"Successfully added URL content to knowledge base: {url}")
         
         return {
             "url": url,
+            "title": content_data['title'],
+            "word_count": content_data['word_count'],
             "status": "success",
-            "message": f"URL content added to knowledge base"
+            "message": f"Successfully extracted and added content from '{content_data['title']}'"
         }
+        
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error processing URL {url}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing URL: {str(e)}")
+
+
+@router.post("/analyze-url/")
+async def analyze_url_endpoint(
+    url: str = Body(..., embed=True),
+    question: str = Body(default="Analyze this web content and provide a comprehensive summary.", embed=True)
+):
+    """Extract content from URL and immediately analyze it."""
+    try:
+        logger.info(f"Analyzing URL: {url}")
+        
+        # First, add the URL to knowledge base
+        url_result = await add_url_endpoint(url)
+        
+        if url_result['status'] != 'success':
+            raise HTTPException(status_code=400, detail="Failed to extract URL content")
+        
+        # Now analyze the content
+        rag_agent = get_rag_agent()
+        
+        # Create analysis question that references the URL
+        analysis_question = f"Based on the content from {url} (titled '{url_result['title']}'), {question}"
+        
+        logger.info(f"Analyzing with question: {analysis_question}")
+        response = await rag_agent.arun(analysis_question)
+        
+        return {
+            "url": url,
+            "title": url_result['title'],
+            "word_count": url_result['word_count'],
+            "question": question,
+            "analysis": response,
+            "status": "success",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error analyzing URL {url}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error analyzing URL: {str(e)}")
 
 
 @router.get("/sessions/", response_model=List[SessionInfo])
@@ -168,8 +319,16 @@ async def get_knowledge_base_stats():
     """Get statistics about the knowledge base."""
     try:
         knowledge_base = get_knowledge_base()
+        
+        # Count different types of documents
+        total_docs = len(knowledge_base.documents)
+        web_docs = sum(1 for doc in knowledge_base.documents if doc.get('metadata', {}).get('type') == 'web_content')
+        file_docs = total_docs - web_docs
+        
         stats = {
-            "total_documents": len(knowledge_base.documents),
+            "total_documents": total_docs,
+            "web_documents": web_docs,
+            "file_documents": file_docs,
             "status": "active"
         }
         

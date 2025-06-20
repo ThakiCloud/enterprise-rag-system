@@ -3,3 +3,4 @@ pytest-asyncio
 httpx 
 agno
 ag-ui-protocol
+tantivy
