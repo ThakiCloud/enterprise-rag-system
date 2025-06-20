@@ -14,7 +14,6 @@ from pathlib import Path
 
 # Document processing imports
 from docx import Document
-import PyPDF2
 import pypdf
 
 from ..schemas.query import QueryRequest, QueryResponse
@@ -32,7 +31,6 @@ logging.basicConfig(level=logging.INFO)
 def extract_text_from_pdf(file_content: bytes) -> str:
     """Extract text from PDF file"""
     try:
-        # Try with pypdf first (newer library)
         pdf_file = io.BytesIO(file_content)
         pdf_reader = pypdf.PdfReader(pdf_file)
         
@@ -40,23 +38,9 @@ def extract_text_from_pdf(file_content: bytes) -> str:
         for page in pdf_reader.pages:
             text += page.extract_text() + "\n"
         
-        if text.strip():
-            return text
-    except Exception as e:
-        logger.warning(f"pypdf failed, trying PyPDF2: {e}")
-    
-    try:
-        # Fallback to PyPDF2
-        pdf_file = io.BytesIO(file_content)
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
-        
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() + "\n"
-        
         return text
     except Exception as e:
-        logger.error(f"Both PDF readers failed: {e}")
+        logger.error(f"PDF processing failed: {e}")
         raise ValueError(f"PDF 파일을 읽을 수 없습니다: {str(e)}")
 
 def extract_text_from_docx(file_content: bytes) -> str:

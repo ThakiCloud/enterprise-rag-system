@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -6,10 +7,20 @@ from datetime import datetime
 from .api.router import router as api_router
 from .core.dependencies import get_knowledge_base, get_rag_agent
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize agents and knowledge base on startup"""
+    print("🚀 Initializing Enterprise RAG System...")
+    get_knowledge_base()
+    get_rag_agent()
+    print("✅ Services initialized successfully!")
+    yield
+
 app = FastAPI(
     title="Enterprise RAG System",
     description="Advanced RAG system with memory, document processing, and reasoning capabilities",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # CORS Middleware
@@ -20,14 +31,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize agents and knowledge base on startup"""
-    print("🚀 Initializing Enterprise RAG System...")
-    get_knowledge_base()
-    get_rag_agent()
-    print("✅ Services initialized successfully!")
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
@@ -1083,9 +1086,9 @@ async def get_dashboard():
                 const responseArea = document.getElementById('responseArea');
                 
                 // Parse the response to extract think section
-                const thinkMatch = response.match(/<think>([\s\S]*?)<\/think>/);
+                const thinkMatch = response.match(/<think>([\\s\\S]*?)<\\/think>/);
                 const thinkContent = thinkMatch ? thinkMatch[1].trim() : '';
-                const actualResponse = response.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+                const actualResponse = response.replace(/<think>[\\s\\S]*?<\\/think>/, '').trim();
                 
                 // Create structured HTML
                 const structuredHtml = `

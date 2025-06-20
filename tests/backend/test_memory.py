@@ -148,11 +148,12 @@ class TestMemoryAPI:
             client = TestClient(app)
             
             # Test get memories
-            response = client.get("/api/sessions/test_session/memories")
+            response = client.get("/api/v1/sessions/test_session/memories")
             assert response.status_code == 200
             
             # Test add memory
-            response = client.post("/api/sessions/test_session/memories", json={
+            response = client.post("/api/v1/sessions/test_session/memories", json={
+                "session_id": "test_session",
                 "action": "add",
                 "memory_content": "테스트 메모리",
                 "topics": ["테스트"]
@@ -160,7 +161,8 @@ class TestMemoryAPI:
             assert response.status_code == 200
             
             # Test clear memories  
-            response = client.post("/api/sessions/test_session/memories", json={
+            response = client.post("/api/v1/sessions/test_session/memories", json={
+                "session_id": "test_session",
                 "action": "clear"
             })
             assert response.status_code == 200

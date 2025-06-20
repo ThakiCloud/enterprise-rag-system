@@ -32,4 +32,6 @@ jobs:
     - name: Run tests
       run: |
         cd backend
-        python -m pytest ../tests/backend/ -v --maxfail=5 
+        python -m pytest ../tests/backend/ -v --maxfail=5
+      env:
+        OPENAI_API_KEY: "test-key-for-ci" 

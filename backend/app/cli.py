@@ -3,6 +3,7 @@ CLI interface for the Enterprise RAG System
 """
 import asyncio
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -18,7 +19,7 @@ class RAGCLI:
         self.rag_agent = get_rag_agent()
         self.reasoning_agent = get_reasoning_agent()
         self.research_team = get_research_team()
-        self.current_session_id = f"cli_session_{int(asyncio.get_event_loop().time())}"
+        self.current_session_id = f"cli_session_{int(time.time())}"
         
     def print_banner(self):
         """Print CLI banner"""
