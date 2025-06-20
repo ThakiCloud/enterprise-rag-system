@@ -43,9 +43,9 @@ class SimpleAgent:
         results = self.knowledge_base.search(query)
         if results:
             context = "\n".join([r["content"] for r in results])
-            return f"Based on the available documents:\n{context}\n\nRegarding your query: {query}\nThis is a simple response from {self.name}."
+            return f"사용 가능한 문서를 바탕으로 답변드립니다:\n\n{context}\n\n질문: {query}\n\n위 문서 내용을 참고하여 답변드립니다. ({self.name}에서 제공)"
         else:
-            return f"I couldn't find relevant information for your query: {query}"
+            return f"죄송합니다. 질문 '{query}'에 대한 관련 정보를 찾을 수 없습니다. 더 구체적인 질문을 해주시거나 관련 문서를 업로드해 주세요."
 
 # LM Studio compatible agent
 class LMStudioAgent:
@@ -64,12 +64,26 @@ class LMStudioAgent:
             # Search knowledge base first
             results = self.knowledge_base.search(query)
             
-            # Prepare context
+            # Prepare context with Korean language instruction
+            base_system_prompt = """당신은 한국어로 답변하는 기업용 RAG(검색 증강 생성) 어시스턴트입니다. 
+반드시 한국어로만 답변해주세요. 영어나 다른 언어로 답변하지 마세요.
+
+사용자의 질문에 대해 정확하고 도움이 되는 답변을 제공하세요. 
+답변은 친근하고 전문적인 톤으로 작성해주세요."""
+
             if results:
-                context = "\n".join([f"Document {i+1}: {r['content'][:500]}..." for i, r in enumerate(results)])
-                system_message = f"You are an enterprise RAG assistant. Use the following documents to answer the user's question:\n\n{context}"
+                context = "\n".join([f"문서 {i+1}: {r['content'][:500]}..." for i, r in enumerate(results)])
+                system_message = f"""{base_system_prompt}
+
+다음 문서들을 참고하여 사용자의 질문에 답변해주세요:
+
+{context}
+
+위 문서 내용을 바탕으로 사용자의 질문에 한국어로 답변해주세요."""
             else:
-                system_message = "You are an enterprise RAG assistant. Answer the user's question based on your knowledge."
+                system_message = f"""{base_system_prompt}
+
+사용자의 질문에 대해 당신의 지식을 바탕으로 한국어로 답변해주세요."""
             
             # Call LM Studio with simple message format
             response = await self.client.chat.completions.create(
@@ -86,13 +100,13 @@ class LMStudioAgent:
             
         except Exception as e:
             logger.error(f"LM Studio agent error: {e}")
-            # Fallback to simple response
+            # Fallback to simple response in Korean
             results = self.knowledge_base.search(query)
             if results:
                 context = "\n".join([r["content"] for r in results])
-                return f"Based on the available documents:\n{context}\n\nRegarding your query: {query}\n\n(Note: LM Studio connection failed, using fallback response)"
+                return f"사용 가능한 문서를 바탕으로 답변드립니다:\n{context}\n\n질문에 대한 답변: {query}\n\n(참고: LM Studio 연결 실패로 기본 응답을 사용했습니다)"
             else:
-                return f"I couldn't find relevant information for your query: {query}\n\n(Note: LM Studio connection failed)"
+                return f"죄송합니다. 질문 '{query}'에 대한 관련 정보를 찾을 수 없습니다.\n\n(참고: LM Studio 연결 실패)"
 
 # Try to import advanced agent factory; fall back to SimpleAgent if unavailable.
 try:

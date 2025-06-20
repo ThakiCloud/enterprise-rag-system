@@ -126,6 +126,127 @@ async def get_dashboard():
                 font-family: 'Monaco', 'Menlo', monospace;
                 font-size: 14px;
                 line-height: 1.6;
+                overflow-y: auto;
+                max-height: 500px;
+                position: relative;
+            }
+            .response-area.streaming {
+                border-color: #4CAF50;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e8f5e8 100%);
+            }
+            .response-area.streaming::after {
+                content: '▋';
+                color: #4CAF50;
+                animation: blink 1s infinite;
+                font-weight: bold;
+            }
+            @keyframes blink {
+                0%, 50% { opacity: 1; }
+                51%, 100% { opacity: 0; }
+            }
+            
+            /* Structured response display */
+            .response-container {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                white-space: normal;
+            }
+            
+            .response-section {
+                margin-bottom: 20px;
+                border: 1px solid #e1e5e9;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            
+            .response-section-header {
+                background: #f8f9fa;
+                padding: 12px 16px;
+                border-bottom: 1px solid #e1e5e9;
+                font-weight: 600;
+                color: #495057;
+                font-size: 14px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            .response-section-content {
+                padding: 16px;
+                background: white;
+                font-family: 'Monaco', 'Menlo', monospace;
+                font-size: 13px;
+                line-height: 1.5;
+                white-space: pre-wrap;
+            }
+            
+            .query-section .response-section-header {
+                background: #e3f2fd;
+                color: #1976d2;
+            }
+            
+            .think-section .response-section-header {
+                background: #fff3e0;
+                color: #f57c00;
+                cursor: pointer;
+                user-select: none;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .think-section .response-section-header:hover {
+                background: #ffe0b2;
+            }
+            
+            .think-toggle {
+                font-size: 12px;
+                transition: transform 0.2s ease;
+            }
+            
+            .think-toggle.collapsed {
+                transform: rotate(-90deg);
+            }
+            
+            .response-section .response-section-header {
+                background: #e8f5e8;
+                color: #2e7d32;
+            }
+            
+            .metadata-section .response-section-header {
+                background: #f3e5f5;
+                color: #7b1fa2;
+            }
+            
+            .think-content {
+                max-height: 300px;
+                overflow-y: auto;
+                transition: max-height 0.3s ease;
+            }
+            
+            .think-content.collapsed {
+                max-height: 0;
+                padding: 0 16px;
+                overflow: hidden;
+            }
+            
+            .metadata-content {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-size: 12px;
+                color: #6c757d;
+            }
+            
+            .metadata-item {
+                margin-bottom: 8px;
+            }
+            
+            .metadata-label {
+                font-weight: 600;
+                color: #495057;
+            }
+            
+            .streaming-cursor {
+                color: #4CAF50;
+                animation: blink 1s infinite;
+                font-weight: bold;
             }
             .feature-box { 
                 background: white; 
@@ -314,15 +435,21 @@ async def get_dashboard():
                         showStatus('URL content added successfully!', 'success');
                         urlInput.value = '';
                         
-                        // Update response area with URL info
-                        const responseArea = document.getElementById('responseArea');
-                        const urlInfo = 'URL Added to Knowledge Base:\\n\\n' +
-                                       'Title: ' + result.title + '\\n' +
-                                       'URL: ' + result.url + '\\n' +
-                                       'Word Count: ' + result.word_count + '\\n\\n' +
-                                       result.message + '\\n\\n' +
-                                       'You can now ask questions about this content!';
-                        responseArea.textContent = urlInfo;
+                        // Create structured display for URL addition
+                        const urlQuery = 'Add URL to knowledge base: ' + result.url;
+                        const urlResponse = 'Successfully added web content to knowledge base!\\n\\n' +
+                                          'Title: ' + result.title + '\\n' +
+                                          'Word Count: ' + result.word_count + ' words\\n\\n' +
+                                          result.message + '\\n\\n' +
+                                          'You can now ask questions about this content!';
+                        
+                        parseAndDisplayResponse(
+                            urlQuery,
+                            urlResponse,
+                            'url_add_' + Date.now(),
+                            new Date().toISOString(),
+                            false
+                        );
                     } else {
                         showStatus('Error: ' + (result.message || 'Unknown error'), 'error');
                     }
@@ -377,15 +504,16 @@ async def get_dashboard():
                         showStatus('URL analysis completed!', 'success');
                         urlInput.value = '';
                         
-                        // Update response area with analysis
-                        const responseArea = document.getElementById('responseArea');
-                        const analysisText = 'Web Content Analysis:\\n\\n' +
-                                           'Title: ' + result.title + '\\n' +
-                                           'URL: ' + result.url + '\\n' +
-                                           'Word Count: ' + result.word_count + '\\n\\n' +
-                                           'Analysis:\\n' + result.analysis + '\\n\\n' +
-                                           'Timestamp: ' + result.timestamp;
-                        responseArea.textContent = analysisText;
+                        // Create a structured query for URL analysis
+                        const urlQuery = 'Analyze the content from: ' + result.url + ' (Title: ' + result.title + ')';
+                        
+                        parseAndDisplayResponse(
+                            urlQuery,
+                            result.analysis,
+                            'url_analysis_' + Date.now(),
+                            result.timestamp,
+                            false
+                        );
                     } else {
                         showStatus('Error: ' + (result.message || 'Unknown error'), 'error');
                     }
@@ -439,21 +567,13 @@ async def get_dashboard():
                     debugLog('Query result:', result);
                     
                     if (result.status === 'success') {
-                        const responseArea = document.getElementById('responseArea');
-                        let responseText = 'Query: ' + result.query + '\\n\\nResponse:\\n' + result.response + '\\n\\nSession ID: ' + result.session_id + '\\nTimestamp: ' + result.timestamp;
-                        
-                        if (result.sources && result.sources.length > 0) {
-                            responseText += '\\n\\nSources: ' + result.sources.length + ' documents referenced';
-                        }
-                        
-                        if (result.reasoning_steps && result.reasoning_steps.length > 0) {
-                            responseText += '\\n\\nReasoning Steps:\\n';
-                            for (let i = 0; i < result.reasoning_steps.length; i++) {
-                                responseText += (i + 1) + '. ' + result.reasoning_steps[i] + '\\n';
-                            }
-                        }
-                        
-                        responseArea.textContent = responseText;
+                        parseAndDisplayResponse(
+                            result.query,
+                            result.response,
+                            result.session_id,
+                            result.timestamp,
+                            false
+                        );
                         showStatus('Query completed successfully!', 'success');
                     } else {
                         showStatus('Error: ' + (result.message || 'Unknown error'), 'error');
@@ -551,6 +671,92 @@ async def get_dashboard():
             }
             
             console.log('Script finished loading');
+
+            function parseAndDisplayResponse(query, response, sessionId, timestamp, isStreaming = false) {
+                const responseArea = document.getElementById('responseArea');
+                
+                // Parse the response to extract think section
+                const thinkMatch = response.match(/<think>([\s\S]*?)<\/think>/);
+                const thinkContent = thinkMatch ? thinkMatch[1].trim() : '';
+                const actualResponse = response.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+                
+                // Create structured HTML
+                const structuredHtml = `
+                    <div class="response-container">
+                        <div class="response-section query-section">
+                            <div class="response-section-header">📝 Query</div>
+                            <div class="response-section-content">${query}</div>
+                        </div>
+                        
+                        ${thinkContent ? `
+                        <div class="response-section think-section">
+                            <div class="response-section-header" onclick="toggleThinkSection()">
+                                🤔 Thinking Process
+                                <span class="think-toggle">▼</span>
+                            </div>
+                            <div class="response-section-content think-content" id="thinkContent">
+                                ${thinkContent}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="response-section response-section">
+                            <div class="response-section-header">💡 Response</div>
+                            <div class="response-section-content" id="actualResponseContent">
+                                ${actualResponse}${isStreaming ? '<span class="streaming-cursor">▋</span>' : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="response-section metadata-section">
+                            <div class="response-section-header">ℹ️ Metadata</div>
+                            <div class="response-section-content metadata-content">
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Session ID:</span> ${sessionId}
+                                </div>
+                                <div class="metadata-item">
+                                    <span class="metadata-label">Timestamp:</span> ${timestamp}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                responseArea.innerHTML = structuredHtml;
+                
+                // Add streaming cursor animation if needed
+                if (isStreaming) {
+                    responseArea.classList.add('streaming');
+                } else {
+                    responseArea.classList.remove('streaming');
+                }
+            }
+            
+            function toggleThinkSection() {
+                const thinkContent = document.getElementById('thinkContent');
+                const thinkToggle = document.querySelector('.think-toggle');
+                
+                if (thinkContent && thinkToggle) {
+                    thinkContent.classList.toggle('collapsed');
+                    thinkToggle.classList.toggle('collapsed');
+                }
+            }
+            
+            function updateStreamingResponse(content) {
+                const actualResponseContent = document.getElementById('actualResponseContent');
+                if (actualResponseContent) {
+                    // Remove existing streaming cursor
+                    const existingCursor = actualResponseContent.querySelector('.streaming-cursor');
+                    if (existingCursor) {
+                        existingCursor.remove();
+                    }
+                    
+                    // Add new content and cursor
+                    actualResponseContent.innerHTML = content + '<span class="streaming-cursor">▋</span>';
+                    
+                    // Scroll to bottom
+                    actualResponseContent.scrollTop = actualResponseContent.scrollHeight;
+                }
+            }
         </script>
     </body>
     </html>

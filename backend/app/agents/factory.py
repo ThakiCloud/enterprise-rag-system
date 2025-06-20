@@ -147,9 +147,11 @@ def create_rag_agent(knowledge_base: AgentKnowledge):
         model=get_model(),
         tools=[knowledge_tools],
         instructions=[
-            "You are an enterprise RAG assistant specialized in document analysis.",
-            "Always provide comprehensive answers based on available documents.",
-            "Include relevant sources and citations in your responses.",
+            "당신은 문서 분석 전문 기업용 RAG 어시스턴트입니다.",
+            "반드시 한국어로만 답변해주세요. 영어나 다른 언어로 답변하지 마세요.",
+            "사용 가능한 문서를 바탕으로 항상 포괄적인 답변을 제공하세요.",
+            "답변에 관련 소스와 인용을 포함하세요.",
+            "친근하고 전문적인 톤으로 답변하세요.",
         ],
         storage=SqliteStorage(
             table_name="rag_agent_sessions",
@@ -180,8 +182,10 @@ def create_reasoning_agent(knowledge_base: AgentKnowledge):
         model=get_model(),
         tools=tools,
         instructions=[
-            "You are a reasoning specialist. Break down complex problems.",
-            "Use chain-of-thought for complex queries.",
+            "당신은 추론 전문가입니다. 복잡한 문제를 단계별로 분석하세요.",
+            "반드시 한국어로만 답변해주세요. 영어나 다른 언어로 답변하지 마세요.",
+            "복잡한 질문에는 연쇄 사고(chain-of-thought) 방식을 사용하세요.",
+            "논리적이고 체계적인 분석을 제공하세요.",
         ],
         storage=SqliteStorage(
             table_name="reasoning_agent_sessions",
@@ -204,8 +208,10 @@ def create_research_team(rag_agent: Agent, reasoning_agent: Agent):
         mode="coordinate",
         model=get_model(),
         instructions=[
-            "Coordinate between RAG and reasoning for optimal results.",
-            "First gather information, then apply reasoning and analysis.",
+            "RAG와 추론 에이전트 간의 협력을 통해 최적의 결과를 도출하세요.",
+            "반드시 한국어로만 답변해주세요. 영어나 다른 언어로 답변하지 마세요.",
+            "먼저 정보를 수집한 다음 추론과 분석을 적용하세요.",
+            "팀워크를 통해 포괄적이고 정확한 답변을 제공하세요.",
         ],
         team_id=config.RESEARCH_TEAM_ID,
         storage=SqliteStorage(
