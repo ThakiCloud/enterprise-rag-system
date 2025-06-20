@@ -6,7 +6,7 @@ from agno.agent import Agent
 from agno.app.agui.app import AGUIApp
 from agno.models.openai import OpenAIChat
 
-from . import config
+import config
 
 class BackendRAGAgent(Agent):
     """Custom Agent that forwards queries to the backend RAG system."""
@@ -64,10 +64,10 @@ class BackendRAGAgent(Agent):
             
         except requests.RequestException as e:
             class ErrorResponse:
-                def __init__(self, error_msg):
-                    self.content = f"❌ **Backend Error:** {error_msg}\n\nPlease ensure the backend server is running at {self.backend_url}"
+                def __init__(self, error_msg, backend_url):
+                    self.content = f"❌ **Backend Error:** {error_msg}\n\nPlease ensure the backend server is running at {backend_url}"
             
-            return ErrorResponse(str(e))
+            return ErrorResponse(str(e), self.backend_url)
 
 # Create the backend-connected agent
 chat_agent = BackendRAGAgent(
