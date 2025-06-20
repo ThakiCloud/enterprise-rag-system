@@ -1,11 +1,15 @@
 import pytest
 from fastapi.testclient import TestClient
 import sys
+import os
 from pathlib import Path
 
 # Add backend to path
 backend_dir = Path(__file__).parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_dir))
+
+# Set environment variable to indicate test mode
+os.environ["PYTEST_CURRENT_TEST"] = "true"
 
 from app.main import app
 

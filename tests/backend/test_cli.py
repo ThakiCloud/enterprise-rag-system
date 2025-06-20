@@ -298,7 +298,12 @@ class TestCLIIntegration:
         assert "Test response" in output
         mock_agent.run.assert_called_once_with("Test question")
     
-    def test_cli_session_id_format(self):
+    @patch('app.cli.get_knowledge_base')
+    @patch('app.cli.get_rag_agent')
+    @patch('app.cli.get_reasoning_agent')
+    @patch('app.cli.get_research_team')
+    def test_cli_session_id_format(self, mock_research_team, mock_reasoning_agent, 
+                                   mock_rag_agent, mock_knowledge_base):
         """Test that session ID is properly formatted"""
         cli = RAGCLI()
         assert cli.current_session_id.startswith('cli_session_')

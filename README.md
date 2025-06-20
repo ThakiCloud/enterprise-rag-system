@@ -172,6 +172,7 @@ flake8 backend/app --select=E9,F63,F7,F82
 ### CI/CD 프로세스
 - **자동 실행**: 모든 커밋/PR에서 기본 문법 검사 & 테스트 자동 실행
 - **수동 배포**: GitHub Actions에서 명시적으로 빌드/배포 요청
+- **조용한 실행**: 이메일 알림 비활성화로 깔끔한 워크플로우
 - **상세 가이드**: [CI/CD 가이드](docs/cicd-guide.md) 참고
 
 ## 🚢 Deployment

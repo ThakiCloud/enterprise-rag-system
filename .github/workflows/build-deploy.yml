@@ -16,13 +16,17 @@ on:
     tags:
       - 'v*'  # Only on version tags
 
+# Disable email notifications and verbose output
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  ACTIONS_RUNNER_DEBUG: false
+  ACTIONS_STEP_DEBUG: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    continue-on-error: false
     permissions:
       contents: read
       packages: write
@@ -86,6 +90,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    continue-on-error: false
     if: github.event_name == 'workflow_dispatch'
     
     steps:

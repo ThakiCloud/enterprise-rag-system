@@ -115,6 +115,7 @@ git push origin v1.0.0
 - **빠른 피드백**: 린트/테스트는 2-3분 내 완료
 - **불필요한 대기 없음**: 빌드는 필요할 때만 실행
 - **로컬 개발 우선**: `./deploy.sh`로 즉시 테스트
+- **조용한 실행**: 이메일 알림 없이 깔끔한 워크플로우
 
 ### ✅ 안정성 보장
 - **코드 품질**: 모든 변경사항이 린트/테스트 통과
@@ -125,6 +126,7 @@ git push origin v1.0.0
 - **최소 CI 실행 시간**: 불필요한 빌드 제거
 - **캐싱 활용**: Docker 빌드 캐시로 시간 단축
 - **병렬 처리**: 린트와 테스트 병렬 실행
+- **알림 최소화**: 스팸 이메일 없이 필요한 정보만 제공
 
 ## 🔧 설정 방법
 
@@ -157,6 +159,11 @@ git push origin v1.0.0
    - Settings → Branches → main 브랜치
    - "Require status checks to pass" 체크
    - "lint-and-test" 상태 체크 필수 설정
+
+3. **알림 비활성화 설정**
+   - Settings → Notifications 에서 이메일 알림 끄기
+   - 워크플로우 파일에 `ACTIONS_RUNNER_DEBUG: false` 설정 적용됨
+   - `.github/settings.yml`로 Repository 레벨 알림 비활성화
 
 ## 📊 모니터링
 

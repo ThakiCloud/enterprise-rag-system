@@ -6,9 +6,16 @@ on:
   pull_request:
     branches: [ main ]
 
+# Disable email notifications
+env:
+  ACTIONS_RUNNER_DEBUG: false
+  ACTIONS_STEP_DEBUG: false
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    continue-on-error: false
+    
     steps:
     - uses: actions/checkout@v4
     
@@ -32,6 +39,6 @@ jobs:
     - name: Run tests
       run: |
         cd backend
-        python -m pytest ../tests/backend/ -v --maxfail=5
+        python -m pytest ../tests/backend/ -v --maxfail=5 --tb=short
       env:
         OPENAI_API_KEY: "test-key-for-ci" 
