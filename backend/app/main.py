@@ -167,7 +167,7 @@ async def get_dashboard():
                         <p>Upload PDF, DOCX, or text files to expand the knowledge base.</p>
                         <div class="form-group">
                             <input type="file" id="fileInput" class="form-control" multiple accept=".pdf,.docx,.txt">
-                            <button onclick="uploadFiles()" class="btn" style="margin-top: 10px; width: 100%;">Upload Documents</button>
+                            <button id="uploadBtn" class="btn" style="margin-top: 10px; width: 100%;">Upload Documents</button>
                         </div>
                     </div>
                     
@@ -176,7 +176,7 @@ async def get_dashboard():
                         <p>Add web content to the knowledge base.</p>
                         <div class="form-group">
                             <input type="url" id="urlInput" class="form-control" placeholder="https://example.com">
-                            <button onclick="addUrl()" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">Add URL</button>
+                            <button id="addUrlBtn" class="btn btn-secondary" style="margin-top: 10px; width: 100%;">Add URL</button>
                         </div>
                     </div>
                     
@@ -199,8 +199,8 @@ async def get_dashboard():
                         <textarea id="questionInput" class="form-control" rows="3" 
                                 placeholder="Enter your question about the uploaded documents..."></textarea>
                         <div class="checkbox-group">
-                            <button onclick="submitQuery()" class="btn" style="margin-top: 15px;">Submit Query</button>
-                            <button onclick="clearSession()" class="btn btn-secondary" style="margin-top: 15px; margin-left: 10px;">New Session</button>
+                            <button id="submitBtn" class="btn" style="margin-top: 15px;">Submit Query</button>
+                            <button id="clearBtn" class="btn btn-secondary" style="margin-top: 15px; margin-left: 10px;">New Session</button>
                         </div>
                     </div>
                     
@@ -226,19 +226,95 @@ async def get_dashboard():
         <script>
             let currentSessionId = null;
             
+            // Debug logging
+            function debugLog(message, data = null) {
+                console.log('[Enterprise RAG] ' + message, data || '');
+            }
+            
             function generateSessionId() {
                 return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             }
             
             function showStatus(message, type = 'loading') {
+                debugLog('Status: ' + type, message);
                 const statusArea = document.getElementById('statusArea');
-                statusArea.innerHTML = `<div class="status ${type}">${message}</div>`;
+                statusArea.innerHTML = '<div class="status ' + type + '">' + message + '</div>';
                 if (type !== 'loading') {
-                    setTimeout(() => statusArea.innerHTML = '', 3000);
+                    setTimeout(() => {
+                        statusArea.innerHTML = '';
+                    }, 5000);
                 }
             }
             
+            // -----------------------------
+            // Initialization (runs once UI is ready)
+            // -----------------------------
+            function initRagDashboard() {
+                debugLog('Page loaded, initializing...');
+                showStatus('System ready!', 'success');
+                
+                // Make functions globally accessible
+                window.uploadFiles = uploadFiles;
+                window.addUrl = addUrl;
+                window.submitQuery = submitQuery;
+                window.clearSession = clearSession;
+                
+                // Add event listeners for buttons
+                const uploadBtn = document.getElementById('uploadBtn');
+                if (uploadBtn) {
+                    uploadBtn.addEventListener('click', uploadFiles);
+                    debugLog('Upload button event listener attached');
+                } else {
+                    debugLog('Upload button not found!');
+                }
+                
+                const urlBtn = document.getElementById('addUrlBtn');
+                if (urlBtn) {
+                    urlBtn.addEventListener('click', addUrl);
+                    debugLog('URL button event listener attached');
+                } else {
+                    debugLog('URL button not found!');
+                }
+                
+                const submitBtn = document.getElementById('submitBtn');
+                if (submitBtn) {
+                    submitBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        debugLog('Submit button clicked!');
+                        submitQuery();
+                    });
+                    debugLog('Submit Query button event listener attached');
+                } else {
+                    debugLog('Submit Query button not found!');
+                }
+                
+                const clearBtn = document.getElementById('clearBtn');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        debugLog('Clear button clicked!');
+                        clearSession();
+                    });
+                    debugLog('Clear Session button event listener attached');
+                } else {
+                    debugLog('Clear Session button not found!');
+                }
+                
+                // Test backend connectivity
+                fetch('/api/v1/knowledge-base/stats')
+                    .then(response => response.json())
+                    .then(data => {
+                        debugLog('Backend connectivity test passed', data);
+                        showStatus('Backend connected - ' + data.total_documents + ' documents in knowledge base', 'success');
+                    })
+                    .catch(error => {
+                        debugLog('Backend connectivity test failed', error);
+                        showStatus('Warning: Backend connection failed', 'error');
+                    });
+            }
+            
             async function uploadFiles() {
+                debugLog('Starting file upload...');
                 const fileInput = document.getElementById('fileInput');
                 const files = fileInput.files;
                 
@@ -247,9 +323,13 @@ async def get_dashboard():
                     return;
                 }
                 
-                showStatus('Uploading and processing documents...', 'loading');
+                showStatus('Uploading ' + files.length + ' file(s)...', 'loading');
+                
+                let successCount = 0;
+                let errorCount = 0;
                 
                 for (let file of files) {
+                    debugLog('Uploading file: ' + file.name + ' (' + file.size + ' bytes)');
                     const formData = new FormData();
                     formData.append('file', file);
                     
@@ -259,21 +339,40 @@ async def get_dashboard():
                             body: formData
                         });
                         
+                        if (!response.ok) {
+                            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                        }
+                        
                         const result = await response.json();
+                        debugLog('Upload result for ' + file.name + ':', result);
+                        
                         if (result.status === 'success') {
-                            showStatus(`Successfully uploaded: ${file.name}`, 'success');
+                            successCount++;
+                            debugLog('Successfully uploaded: ' + file.name);
                         } else {
-                            showStatus(`Error uploading ${file.name}: ${result.message}`, 'error');
+                            errorCount++;
+                            debugLog('Error uploading ' + file.name + ':', result.message);
                         }
                     } catch (error) {
-                        showStatus(`Error uploading ${file.name}: ${error.message}`, 'error');
+                        errorCount++;
+                        debugLog('Error uploading ' + file.name + ':', error);
+                        console.error('Upload error:', error);
                     }
                 }
                 
                 fileInput.value = '';
+                
+                if (successCount > 0 && errorCount === 0) {
+                    showStatus('Successfully uploaded ' + successCount + ' file(s)!', 'success');
+                } else if (successCount > 0 && errorCount > 0) {
+                    showStatus('Uploaded ' + successCount + ' file(s), ' + errorCount + ' failed', 'error');
+                } else {
+                    showStatus('Failed to upload all files', 'error');
+                }
             }
             
             async function addUrl() {
+                debugLog('Starting URL processing...');
                 const urlInput = document.getElementById('urlInput');
                 const url = urlInput.value.trim();
                 
@@ -282,7 +381,16 @@ async def get_dashboard():
                     return;
                 }
                 
+                // Basic URL validation
+                try {
+                    new URL(url);
+                } catch (e) {
+                    showStatus('Please enter a valid URL', 'error');
+                    return;
+                }
+                
                 showStatus('Processing URL content...', 'loading');
+                debugLog('Processing URL: ' + url);
                 
                 try {
                     const response = await fetch('/api/v1/add-url/', {
@@ -293,19 +401,27 @@ async def get_dashboard():
                         body: JSON.stringify({ url: url })
                     });
                     
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    
                     const result = await response.json();
+                    debugLog('URL processing result:', result);
+                    
                     if (result.status === 'success') {
                         showStatus('URL content added successfully!', 'success');
                         urlInput.value = '';
                     } else {
-                        showStatus(`Error: ${result.message}`, 'error');
+                        showStatus('Error: ' + result.message, 'error');
                     }
                 } catch (error) {
-                    showStatus(`Error: ${error.message}`, 'error');
+                    debugLog('URL processing error:', error);
+                    showStatus('Error: ' + error.message, 'error');
                 }
             }
             
             async function submitQuery() {
+                debugLog('Starting query submission...');
                 const question = document.getElementById('questionInput').value.trim();
                 if (!question) {
                     showStatus('Please enter a question', 'error');
@@ -314,53 +430,70 @@ async def get_dashboard():
                 
                 if (!currentSessionId) {
                     currentSessionId = generateSessionId();
+                    debugLog('Generated new session ID: ' + currentSessionId);
                 }
                 
                 const advancedReasoning = document.getElementById('advancedReasoning').checked;
+                debugLog('Query: "' + question + '", Advanced Reasoning: ' + advancedReasoning);
                 
                 showStatus('Processing your query...', 'loading');
                 
                 try {
+                    const requestBody = {
+                        question: question,
+                        session_id: currentSessionId,
+                        use_advanced_reasoning: advancedReasoning
+                    };
+                    
+                    debugLog('Sending request to /api/v1/query/...', requestBody);
+                    
                     const response = await fetch('/api/v1/query/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({
-                            question: question,
-                            session_id: currentSessionId,
-                            use_advanced_reasoning: advancedReasoning
-                        })
+                        body: JSON.stringify(requestBody)
                     });
                     
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                    }
+                    
                     const result = await response.json();
+                    debugLog('Query result:', result);
                     
                     if (result.status === 'success') {
                         const responseArea = document.getElementById('responseArea');
-                        let responseText = `Query: ${result.query}\n\nResponse:\n${result.response}\n\nSession ID: ${result.session_id}\nTimestamp: ${result.timestamp}`;
+                        let responseText = 'Query: ' + result.query + '\n\nResponse:\n' + result.response + '\n\nSession ID: ' + result.session_id + '\nTimestamp: ' + result.timestamp;
                         
                         if (result.sources && result.sources.length > 0) {
-                            responseText += `\n\nSources: ${result.sources.length} documents referenced`;
+                            responseText += '\n\nSources: ' + result.sources.length + ' documents referenced';
                         }
                         
                         if (result.reasoning_steps && result.reasoning_steps.length > 0) {
-                            responseText += `\n\nReasoning Steps:\n${result.reasoning_steps.map((step, i) => `${i+1}. ${step}`).join('\n')}`;
+                            responseText += '\n\nReasoning Steps:\n';
+                            for (let i = 0; i < result.reasoning_steps.length; i++) {
+                                responseText += (i + 1) + '. ' + result.reasoning_steps[i] + '\n';
+                            }
                         }
                         
-                        responseArea.innerHTML = responseText;
+                        responseArea.textContent = responseText;
                         showStatus('Query completed successfully!', 'success');
                     } else {
-                        showStatus(`Error: ${result.message || 'Unknown error'}`, 'error');
+                        showStatus('Error: ' + (result.message || 'Unknown error'), 'error');
                     }
                 } catch (error) {
-                    showStatus(`Error: ${error.message}`, 'error');
+                    debugLog('Query submission error:', error);
+                    showStatus('Error: ' + error.message, 'error');
+                    console.error('Query error:', error);
                 }
             }
             
             function clearSession() {
+                debugLog('Clearing session...');
                 currentSessionId = null;
                 document.getElementById('questionInput').value = '';
-                document.getElementById('responseArea').innerHTML = 'New session started. You can now ask questions!';
+                document.getElementById('responseArea').textContent = 'New session started. You can now ask questions!';
                 showStatus('Session cleared', 'success');
             }
             
@@ -371,6 +504,21 @@ async def get_dashboard():
                     submitQuery();
                 }
             });
+            
+            // Global error handler
+            window.addEventListener('error', function(e) {
+                debugLog('Global error:', e.error);
+                showStatus('An unexpected error occurred', 'error');
+            });
+            
+            // Global unhandled promise rejection handler
+            window.addEventListener('unhandledrejection', function(e) {
+                debugLog('Unhandled promise rejection:', e.reason);
+                showStatus('An unexpected error occurred', 'error');
+            });
+            
+            // Initialize the dashboard after all functions are defined
+            initRagDashboard();
         </script>
     </body>
     </html>

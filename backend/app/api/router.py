@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Body
 from datetime import datetime
 from typing import List, Dict, Any
+import logging
 
 from ..schemas.query import QueryRequest, QueryResponse
 from ..schemas.document import DocumentUploadResponse
@@ -9,19 +10,28 @@ from ..core.dependencies import get_rag_agent, get_research_team, get_knowledge_
 
 router = APIRouter()
 
+# Set up logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 @router.post("/query/", response_model=QueryResponse)
 async def query_knowledge(
     request: QueryRequest
 ):
     """Process a query using the RAG system."""
     try:
+        logger.info(f"Received query request for session: {request.session_id}")
         session_id = request.session_id or f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
+        logger.info(f"Getting agent for query (advanced_reasoning={request.use_advanced_reasoning})...")
         rag_agent = get_rag_agent()
         research_team = get_research_team()
         agent = research_team if request.use_advanced_reasoning else rag_agent
+        logger.info(f"Using agent: {agent.name if hasattr(agent, 'name') else 'SimpleAgent'}")
         
+        logger.info(f"Executing agent with question: '{request.question}'")
         response = await agent.arun(request.question)
+        logger.info("Agent execution finished, creating response.")
         
         # Simple response handling
         sources = []
@@ -37,6 +47,7 @@ async def query_knowledge(
             status="success"
         )
     except Exception as e:
+        logger.error(f"Error processing query: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing query: {str(e)}")
 
 

@@ -4,6 +4,8 @@ python-multipart
 requests
 pydantic
 httpx
+agno
+ag-ui-protocol
 # AGUIApp and related dependencies
 # Note: Replace with actual agno package when available
 # agno

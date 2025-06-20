@@ -90,12 +90,26 @@ agui_app = AGUIApp(
     name="Enterprise RAG System",
     app_id="enterprise_rag_system",
     description="Advanced RAG system with multi-LLM support and document processing capabilities.",
-    show_session_id=True,
-    show_reasoning=True,
 )
 
 # Get the FastAPI app
 app = agui_app.get_app()
+
+# Add root route for web interface
+@app.get("/")
+async def root():
+    """Root endpoint that provides a simple web interface."""
+    return {
+        "message": "Enterprise RAG System UI",
+        "status": "running",
+        "endpoints": {
+            "chat": "/agui",
+            "status": "/status",
+            "upload": "/upload-document/",
+            "docs": "/docs"
+        },
+        "description": "AGUIApp-based Enterprise RAG System interface"
+    }
 
 # Add custom route for document upload
 @app.post("/upload-document/")
